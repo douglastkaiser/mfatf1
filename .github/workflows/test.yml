@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Validate HTML
+    name: Validate HTML & Assets
     runs-on: ubuntu-latest
 
     steps:
@@ -64,20 +64,60 @@ jobs:
 
           echo "All HTML structure checks passed"
 
+      - name: Check required directories exist
+        run: |
+          errors=0
+          for dir in css js js/services js/models js/scoring js/ui; do
+            if [ ! -d "$dir" ]; then
+              echo "ERROR: Missing directory: $dir"
+              errors=$((errors + 1))
+            fi
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors missing directory(ies)"
+            exit 1
+          fi
+          echo "All required directories exist"
+
+      - name: Check required JS modules exist
+        run: |
+          errors=0
+          for file in js/app.js js/config.js js/services/api.js js/services/hooks.js js/services/storage.js js/scoring/engine.js js/models/team.js js/ui/dashboard.js js/ui/team.js js/ui/views.js; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing file: $file"
+              errors=$((errors + 1))
+            fi
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors missing file(s)"
+            exit 1
+          fi
+          echo "All required JS modules exist"
+
+      - name: Validate CSS exists
+        run: |
+          if [ ! -f "css/styles.css" ]; then
+            echo "ERROR: css/styles.css not found"
+            exit 1
+          fi
+          echo "CSS file exists"
+
       - name: Check for broken internal links
         run: |
-          # Extract href values and check that local file references exist
-          hrefs=$(grep -o 'href="[^"]*"' index.html | sed 's/href="//;s/"$//' || true)
+          # Extract href and src values and check that local file references exist
+          refs=$(grep -oE '(href|src)="[^"]*"' index.html | sed 's/^[^"]*"//;s/"$//' || true)
           errors=0
 
-          for href in $hrefs; do
-            # Skip external links, anchors, and special protocols
-            if echo "$href" | grep -qE '^(https?://|mailto:|tel:|#)'; then
+          for ref in $refs; do
+            # Skip external links, anchors, data URIs, and special protocols
+            if echo "$ref" | grep -qE '^(https?://|mailto:|tel:|#|data:)'; then
               continue
             fi
 
-            if [ ! -f "$href" ]; then
-              echo "ERROR: Broken link: $href"
+            if [ ! -f "$ref" ]; then
+              echo "ERROR: Broken link: $ref"
               errors=$((errors + 1))
             fi
           done
@@ -88,3 +128,19 @@ jobs:
           fi
 
           echo "No broken internal links found"
+
+      - name: Validate JS syntax
+        run: |
+          errors=0
+          for file in $(find js -name '*.js'); do
+            if ! node --check "$file" 2>/dev/null; then
+              echo "ERROR: Syntax error in $file"
+              errors=$((errors + 1))
+            fi
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors JS syntax error(s)"
+            exit 1
+          fi
+          echo "All JS files have valid syntax"
