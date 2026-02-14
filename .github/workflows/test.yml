@@ -67,7 +67,7 @@ jobs:
       - name: Check for broken internal links
         run: |
           # Extract href values and check that local file references exist
-          hrefs=$(grep -oP 'href="\K[^"]+' index.html || true)
+          hrefs=$(grep -o 'href="[^"]*"' index.html | sed 's/href="//;s/"$//' || true)
           errors=0
 
           for href in $hrefs; do
