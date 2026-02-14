@@ -72,9 +72,9 @@ jobs:
 
           for href in $hrefs; do
             # Skip external links, anchors, and special protocols
-            case "$href" in
-              http://*|https://*|mailto:*|tel:*|#*) continue ;;
-            esac
+            if echo "$href" | grep -qE '^(https?://|mailto:|tel:|#)'; then
+              continue
+            fi
 
             if [ ! -f "$href" ]; then
               echo "ERROR: Broken link: $href"
