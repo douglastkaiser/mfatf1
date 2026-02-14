@@ -1,0 +1,76 @@
+name: Deploy Main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "deploy-main"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Deploy to gh-pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-branch
+        continue-on-error: true
+
+      - name: Create gh-pages branch if it doesn't exist
+        run: |
+          if [ ! -d "gh-pages-branch" ]; then
+            mkdir gh-pages-branch
+            cd gh-pages-branch
+            git init
+            git checkout -b gh-pages
+            git remote add origin "https://github.com/${{ github.repository }}.git"
+          fi
+
+      - name: Preserve PR previews and update main build
+        run: |
+          # Preserve the /pr/ directory if it exists
+          if [ -d "gh-pages-branch/pr" ]; then
+            mv gh-pages-branch/pr /tmp/pr-previews
+          fi
+
+          # Preserve CNAME if it exists
+          if [ -f "gh-pages-branch/CNAME" ]; then
+            cp gh-pages-branch/CNAME /tmp/CNAME
+          fi
+
+          # Remove old content except .git
+          find gh-pages-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          # Copy site files
+          cp index.html gh-pages-branch/
+
+          # Restore PR previews
+          if [ -d "/tmp/pr-previews" ]; then
+            mv /tmp/pr-previews gh-pages-branch/pr
+          fi
+
+          # Restore CNAME
+          if [ -f "/tmp/CNAME" ]; then
+            mv /tmp/CNAME gh-pages-branch/CNAME
+          fi
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Deploy main site [skip ci]"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages --force

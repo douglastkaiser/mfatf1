@@ -1,0 +1,90 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check index.html exists
+        run: |
+          if [ ! -f "index.html" ]; then
+            echo "ERROR: index.html not found"
+            exit 1
+          fi
+          echo "index.html exists"
+
+      - name: Validate HTML structure
+        run: |
+          # Check for required HTML elements
+          errors=0
+
+          if ! grep -qi '<!DOCTYPE html>' index.html; then
+            echo "ERROR: Missing <!DOCTYPE html>"
+            errors=$((errors + 1))
+          fi
+
+          if ! grep -qi '<html' index.html; then
+            echo "ERROR: Missing <html> tag"
+            errors=$((errors + 1))
+          fi
+
+          if ! grep -qi '<head>' index.html; then
+            echo "ERROR: Missing <head> tag"
+            errors=$((errors + 1))
+          fi
+
+          if ! grep -qi '<body>' index.html; then
+            echo "ERROR: Missing <body> tag"
+            errors=$((errors + 1))
+          fi
+
+          if ! grep -qi '<title>' index.html; then
+            echo "ERROR: Missing <title> tag"
+            errors=$((errors + 1))
+          fi
+
+          if ! grep -qi 'charset' index.html; then
+            echo "ERROR: Missing charset declaration"
+            errors=$((errors + 1))
+          fi
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors error(s)"
+            exit 1
+          fi
+
+          echo "All HTML structure checks passed"
+
+      - name: Check for broken internal links
+        run: |
+          # Extract href values and check that local file references exist
+          hrefs=$(grep -oP 'href="\K[^"]+' index.html || true)
+          errors=0
+
+          for href in $hrefs; do
+            # Skip external links, anchors, and special protocols
+            case "$href" in
+              http://*|https://*|mailto:*|tel:*|#*) continue ;;
+            esac
+
+            if [ ! -f "$href" ]; then
+              echo "ERROR: Broken link: $href"
+              errors=$((errors + 1))
+            fi
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo "Found $errors broken link(s)"
+            exit 1
+          fi
+
+          echo "No broken internal links found"
