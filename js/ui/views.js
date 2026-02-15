@@ -1,8 +1,8 @@
-// Supplementary Views: Drivers, Constructors, Standings, Calendar
-// Renders the data-display views that show all drivers, constructors,
-// championship standings, and the race calendar.
+// Views: Drivers, Constructors, Standings, Calendar
+// All views render immediately from static config data.
+// API data overlays when available.
 
-import { DRIVERS, CONSTRUCTORS, TEAM_COLORS } from '../config.js';
+import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, RACE_CALENDAR, getFlag } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
 import { loadCachedResults } from '../services/storage.js';
 
@@ -25,16 +25,15 @@ export function initViews() {
 }
 
 // ===== All Drivers =====
-
 function renderDriversTable() {
   const body = document.getElementById('drivers-table-body');
-  const sortVal = document.getElementById('drivers-sort')?.value || 'points-desc';
+  const sortVal = document.getElementById('drivers-sort')?.value || 'price-desc';
   const teamFilter = document.getElementById('drivers-team-filter')?.value || 'all';
 
   let drivers = DRIVERS.map(d => ({
     ...d,
-    teamName: CONSTRUCTORS.find(c => c.id === d.team)?.name || d.team,
-    color: TEAM_COLORS[d.team] || 'var(--border-color)',
+    teamName: CONSTRUCTORS.find(c => c.id === d.team)?.shortName || d.team,
+    color: TEAM_COLORS[d.team] || '#555',
     totalPoints: 0,
     avgPoints: 0,
     lastRace: '--',
@@ -44,25 +43,24 @@ function renderDriversTable() {
     drivers = drivers.filter(d => d.team === teamFilter);
   }
 
-  // Sort
   switch (sortVal) {
     case 'price-desc': drivers.sort((a, b) => b.price - a.price); break;
     case 'price-asc': drivers.sort((a, b) => a.price - b.price); break;
-    case 'points-desc': drivers.sort((a, b) => b.totalPoints - a.totalPoints); break;
-    case 'name-asc': drivers.sort((a, b) => `${a.lastName}`.localeCompare(`${b.lastName}`)); break;
+    case 'points-desc': drivers.sort((a, b) => b.totalPoints - a.totalPoints || b.price - a.price); break;
+    case 'name-asc': drivers.sort((a, b) => a.lastName.localeCompare(b.lastName)); break;
   }
 
   body.innerHTML = drivers.map((d, i) => `
     <tr>
-      <td>${i + 1}</td>
+      <td><span class="pos-badge">${i + 1}</span></td>
       <td>
         <div class="driver-name">
           <span class="team-color-dot" style="background:${d.color}"></span>
-          ${d.firstName} ${d.lastName}
-          <span style="color:var(--text-muted);font-size:0.75rem;margin-left:4px">${d.code}</span>
+          <span><strong>${d.lastName}</strong> ${d.firstName}</span>
+          <span class="driver-card__code">${d.code}</span>
         </div>
       </td>
-      <td>${d.teamName}</td>
+      <td style="color:${d.color};font-weight:600">${d.teamName}</td>
       <td class="points-positive">$${d.price}M</td>
       <td>${d.totalPoints}</td>
       <td>${d.avgPoints}</td>
@@ -72,13 +70,12 @@ function renderDriversTable() {
 }
 
 function setupDriverFilters() {
-  // Populate team filter
   const filter = document.getElementById('drivers-team-filter');
   if (filter) {
     CONSTRUCTORS.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = c.name;
+      opt.textContent = c.shortName;
       filter.appendChild(opt);
     });
     filter.addEventListener('change', renderDriversTable);
@@ -89,7 +86,6 @@ function setupDriverFilters() {
 }
 
 // ===== All Constructors =====
-
 function renderConstructorsTable() {
   const body = document.getElementById('constructors-table-body');
 
@@ -97,22 +93,22 @@ function renderConstructorsTable() {
     ...c,
     driverNames: c.drivers.map(id => {
       const d = DRIVERS.find(d => d.id === id);
-      return d ? `${d.code}` : id;
+      return d ? `${d.firstName} ${d.lastName}` : id;
     }).join(', '),
     totalPoints: 0,
     qualiBonus: 0,
     pitStopPts: 0,
   }));
 
-  constructors.sort((a, b) => b.totalPoints - a.totalPoints);
+  constructors.sort((a, b) => b.price - a.price);
 
   body.innerHTML = constructors.map((c, i) => `
     <tr>
-      <td>${i + 1}</td>
+      <td><span class="pos-badge${i < 3 ? ' pos-badge--' + (i+1) : ''}">${i + 1}</span></td>
       <td>
         <div class="driver-name">
           <span class="team-color-dot" style="background:${c.color}"></span>
-          ${c.name}
+          <strong>${c.shortName}</strong>
         </div>
       </td>
       <td>${c.driverNames}</td>
@@ -125,18 +121,17 @@ function renderConstructorsTable() {
 }
 
 // ===== Standings =====
-
 function renderStandings() {
   const cached = loadCachedResults();
 
-  // Driver standings
+  // WDC
   const driverStandings = cached.driverStandings || [];
   const wdcBody = document.getElementById('wdc-table-body');
 
   if (driverStandings.length > 0) {
     wdcBody.innerHTML = driverStandings.map(s => {
       const constructorId = s.Constructors?.[0]?.constructorId || '';
-      const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || 'var(--border-color)';
+      const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || '#555';
       const pos = parseInt(s.position, 10);
       const posClass = pos <= 3 ? ` pos-badge--${pos}` : '';
       return `
@@ -145,26 +140,45 @@ function renderStandings() {
           <td>
             <div class="driver-name">
               <span class="team-color-dot" style="background:${color}"></span>
-              ${s.Driver?.givenName} ${s.Driver?.familyName}
+              <strong>${s.Driver?.familyName}</strong> ${s.Driver?.givenName}
             </div>
           </td>
-          <td>${s.Constructors?.[0]?.name || ''}</td>
+          <td style="color:${color};font-weight:600">${s.Constructors?.[0]?.name || ''}</td>
           <td><strong>${s.points}</strong></td>
         </tr>
       `;
     }).join('');
   } else {
-    wdcBody.innerHTML = '<tr><td colspan="4" class="text-muted">Season not started yet</td></tr>';
+    // Fallback: show drivers from config sorted by price as a proxy for expected performance
+    const fallback = [...DRIVERS].sort((a, b) => b.price - a.price);
+    wdcBody.innerHTML = fallback.map((d, i) => {
+      const color = TEAM_COLORS[d.team] || '#555';
+      const constructor = CONSTRUCTORS.find(c => c.id === d.team);
+      const posClass = i < 3 ? ` pos-badge--${i + 1}` : '';
+      return `
+        <tr>
+          <td><span class="pos-badge${posClass}">${i + 1}</span></td>
+          <td>
+            <div class="driver-name">
+              <span class="team-color-dot" style="background:${color}"></span>
+              <strong>${d.lastName}</strong> ${d.firstName}
+            </div>
+          </td>
+          <td style="color:${color};font-weight:600">${constructor?.shortName || ''}</td>
+          <td><strong>0</strong></td>
+        </tr>
+      `;
+    }).join('');
   }
 
-  // Constructor standings
+  // WCC
   const constructorStandings = cached.constructorStandings || [];
   const wccBody = document.getElementById('wcc-table-body');
 
   if (constructorStandings.length > 0) {
     wccBody.innerHTML = constructorStandings.map(s => {
       const constructorId = s.Constructor?.constructorId || '';
-      const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || 'var(--border-color)';
+      const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || '#555';
       const pos = parseInt(s.position, 10);
       const posClass = pos <= 3 ? ` pos-badge--${pos}` : '';
       return `
@@ -173,7 +187,7 @@ function renderStandings() {
           <td>
             <div class="driver-name">
               <span class="team-color-dot" style="background:${color}"></span>
-              ${s.Constructor?.name}
+              <strong>${s.Constructor?.name}</strong>
             </div>
           </td>
           <td><strong>${s.points}</strong></td>
@@ -181,25 +195,32 @@ function renderStandings() {
       `;
     }).join('');
   } else {
-    wccBody.innerHTML = '<tr><td colspan="3" class="text-muted">Season not started yet</td></tr>';
+    const fallback = [...CONSTRUCTORS].sort((a, b) => b.price - a.price);
+    wccBody.innerHTML = fallback.map((c, i) => {
+      const posClass = i < 3 ? ` pos-badge--${i + 1}` : '';
+      return `
+        <tr>
+          <td><span class="pos-badge${posClass}">${i + 1}</span></td>
+          <td>
+            <div class="driver-name">
+              <span class="team-color-dot" style="background:${c.color}"></span>
+              <strong>${c.name}</strong>
+            </div>
+          </td>
+          <td><strong>0</strong></td>
+        </tr>
+      `;
+    }).join('');
   }
 }
 
 // ===== Calendar =====
-
-function renderCalendar(races) {
-  const schedule = races || loadCachedResults().schedule || [];
+function renderCalendar() {
   const container = document.getElementById('calendar-list');
   const now = new Date();
-
-  if (schedule.length === 0) {
-    container.innerHTML = '<p class="text-muted">Loading calendar...</p>';
-    return;
-  }
-
   let foundNext = false;
 
-  container.innerHTML = schedule.map((race, i) => {
+  container.innerHTML = RACE_CALENDAR.map(race => {
     const raceDate = new Date(race.date);
     const isPast = raceDate < now;
     const isNext = !isPast && !foundNext;
@@ -209,25 +230,25 @@ function renderCalendar(races) {
       : isNext ? 'calendar-race--next'
       : 'calendar-race--upcoming';
 
-    const statusHtml = isPast
-      ? '<span class="calendar-race__status calendar-race__status--completed">Completed</span>'
-      : isNext
-        ? '<span class="calendar-race__status calendar-race__status--next">Next</span>'
-        : '';
+    const flag = getFlag(race.flag);
 
-    const dateStr = raceDate.toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric',
-    });
+    const dateStr = raceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    let badges = '';
+    if (isPast) badges += '<span class="calendar-race__status calendar-race__status--completed">Completed</span>';
+    if (isNext) badges += '<span class="calendar-race__status calendar-race__status--next">Next Race</span>';
+    if (race.sprint) badges += '<span class="calendar-race__status calendar-race__status--sprint">Sprint</span>';
 
     return `
       <div class="calendar-race ${stateClass}">
         <span class="calendar-race__round">R${race.round}</span>
+        <span class="calendar-race__flag">${flag}</span>
         <div class="calendar-race__info">
-          <div class="calendar-race__name">${race.raceName}</div>
-          <div class="calendar-race__circuit">${race.Circuit?.circuitName || ''}, ${race.Circuit?.Location?.country || ''}</div>
+          <div class="calendar-race__name">${race.name}</div>
+          <div class="calendar-race__circuit">${race.circuit}, ${race.country}</div>
         </div>
         <span class="calendar-race__date">${dateStr}</span>
-        ${statusHtml}
+        <div class="calendar-race__badges">${badges}</div>
       </div>
     `;
   }).join('');
