@@ -48,6 +48,8 @@ jobs:
 
           # Copy site files
           cp index.html "$PR_DIR/"
+          cp -r css "$PR_DIR/"
+          cp -r js "$PR_DIR/"
 
       - name: Commit and push to gh-pages
         run: |
