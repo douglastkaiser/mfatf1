@@ -55,6 +55,8 @@ jobs:
 
           # Copy site files
           cp index.html gh-pages-branch/
+          cp -r css gh-pages-branch/
+          cp -r js gh-pages-branch/
 
           # Restore PR previews
           if [ -d "/tmp/pr-previews" ]; then
