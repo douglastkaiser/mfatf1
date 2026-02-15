@@ -52,19 +52,14 @@
       <!-- Dashboard View -->
       <section class="view active" id="view-dashboard">
         <div class="dashboard-grid">
-          <!-- Next Race Card -->
-          <div class="card card--next-race" id="next-race-card">
-            <div class="card__header">
-              <h2>Next Race</h2>
-              <span class="card__badge" id="next-race-countdown"></span>
-            </div>
-            <div class="card__body">
-              <div class="next-race__info">
-                <h3 id="next-race-name">Loading...</h3>
-                <p id="next-race-circuit" class="text-muted"></p>
-                <p id="next-race-date" class="text-muted"></p>
-              </div>
-            </div>
+          <!-- Hero Next Race Banner -->
+          <div class="card card--hero" id="hero-next-race">
+            <!-- Dynamically populated by dashboard.js -->
+          </div>
+
+          <!-- Stats Row -->
+          <div class="stats-row" id="stats-row">
+            <!-- Dynamically populated -->
           </div>
 
           <!-- Team Summary Card -->
@@ -75,42 +70,7 @@
             </div>
             <div class="card__body">
               <div class="team-mini" id="team-mini-list">
-                <p class="text-muted">No team selected yet. Go to My Team to pick your drivers.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Season Points Chart -->
-          <div class="card card--points-chart">
-            <div class="card__header">
-              <h2>Points Over Season</h2>
-            </div>
-            <div class="card__body">
-              <canvas id="points-chart" width="600" height="200"></canvas>
-            </div>
-          </div>
-
-          <!-- Recent Results -->
-          <div class="card card--recent-results">
-            <div class="card__header">
-              <h2>Latest Race Results</h2>
-              <span class="card__badge" id="latest-race-name"></span>
-            </div>
-            <div class="card__body">
-              <div class="results-table-wrap">
-                <table class="results-table" id="latest-results-table">
-                  <thead>
-                    <tr>
-                      <th>Pos</th>
-                      <th>Driver</th>
-                      <th>Constructor</th>
-                      <th>Fantasy Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody id="latest-results-body">
-                    <tr><td colspan="4" class="text-muted">No results yet</td></tr>
-                  </tbody>
-                </table>
+                <p class="text-muted">No team selected yet.</p>
               </div>
             </div>
           </div>
@@ -118,27 +78,51 @@
           <!-- Hook Activity Log -->
           <div class="card card--hook-log">
             <div class="card__header">
-              <h2>Update Log</h2>
+              <h2>Live Update Log</h2>
               <button class="btn btn--sm" id="force-sync-btn">Force Sync</button>
             </div>
             <div class="card__body">
               <ul class="hook-log" id="hook-log-list">
                 <li class="hook-log__item">
-                  <span class="hook-log__time">--</span>
-                  <span class="hook-log__msg">Waiting for first sync...</span>
+                  <span class="hook-log__time">--:--</span>
+                  <span class="hook-log__msg hook-log__msg--info">Initializing...</span>
                 </li>
               </ul>
             </div>
           </div>
 
-          <!-- Top Fantasy Performers -->
-          <div class="card card--dotd">
+          <!-- Season Points Chart -->
+          <div class="card card--points-chart">
             <div class="card__header">
-              <h2>Top Fantasy Performers</h2>
+              <h2>Season Points Tracker</h2>
             </div>
             <div class="card__body">
-              <div class="top-performers" id="top-performers">
-                <p class="text-muted">Updated after each race</p>
+              <canvas id="points-chart" width="600" height="200"></canvas>
+            </div>
+          </div>
+
+          <!-- Driver Market Grid -->
+          <div class="card card--market">
+            <div class="card__header">
+              <h2>Driver Market</h2>
+              <span class="card__badge">20 Drivers</span>
+            </div>
+            <div class="card__body">
+              <div class="market-grid" id="driver-market">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Constructors -->
+          <div class="card" style="grid-column: 1 / -1">
+            <div class="card__header">
+              <h2>Constructors</h2>
+              <span class="card__badge">10 Teams</span>
+            </div>
+            <div class="card__body">
+              <div id="constructor-list">
+                <!-- Dynamically populated -->
               </div>
             </div>
           </div>
