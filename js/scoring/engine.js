@@ -1,6 +1,6 @@
 // Fantasy Scoring Engine
 // Calculates fantasy points from race results following the official
-// 2025 F1 Fantasy scoring rules.
+// 2026 F1 Fantasy scoring rules.
 
 import { SCORING, DRIVERS, CONSTRUCTORS } from '../config.js';
 import { emit, HookEvents } from '../services/hooks.js';
@@ -27,7 +27,7 @@ export function calculateDriverRacePoints(result, gridPosition, hasFastestLap = 
 
   // DNF / DSQ
   if (status === 'Disqualified') {
-    // 2025: drivers no longer penalized for DSQ
+    // 2026: drivers no longer penalized for DSQ
     breakdown.finish = SCORING.DSQ_PENALTY_DRIVER;
   } else if (position > 0 && !isRetired(status)) {
     // Race finish points
