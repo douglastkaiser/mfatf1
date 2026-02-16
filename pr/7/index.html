@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>F1 Fantasy Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Auth Screen (shown when not logged in) -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="logo__f1">F1</span>
+        <span class="logo__fantasy">FANTASY</span>
+      </div>
+      <p class="auth-subtitle">Sign in to manage your team and compete with friends</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="auth-tab-login">Sign In</button>
+        <button class="auth-tab" id="auth-tab-register">Register</button>
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <div class="auth-field" id="auth-name-group" style="display:none">
+          <label for="auth-name">Display Name</label>
+          <input type="text" id="auth-name" placeholder="How friends will see you" autocomplete="name">
+        </div>
+        <div class="auth-field">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="At least 6 characters" required autocomplete="current-password" minlength="6">
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+        <button type="submit" class="btn btn--primary auth-submit" id="auth-submit">Sign In</button>
+      </form>
+
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
+      <button class="auth-google-btn" id="auth-google-btn">
+        <svg class="auth-google-btn__icon" viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
+      <button class="auth-guest-btn" id="auth-guest-btn">
+        Continue as Guest
+      </button>
+      <p class="auth-guest-hint">Explore the app before creating an account</p>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until authenticated) -->
+  <div id="app" style="display:none">
+    <!-- Top Navigation -->
+    <header class="top-bar">
+      <div class="top-bar__left">
+        <div class="logo">
+          <span class="logo__f1">F1</span>
+          <span class="logo__fantasy">FANTASY</span>
+        </div>
+      </div>
+      <nav class="top-bar__nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="my-team">My Team</button>
+        <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
+        <button class="nav-btn" data-view="drivers">Drivers</button>
+        <button class="nav-btn" data-view="constructors">Constructors</button>
+        <button class="nav-btn" data-view="standings">Standings</button>
+        <button class="nav-btn" data-view="calendar">Calendar</button>
+        <button class="nav-btn nav-btn--admin" data-view="admin" id="nav-admin" style="display:none">Admin</button>
+      </nav>
+      <div class="top-bar__right">
+        <div class="budget-pill" id="budget-display">
+          <span class="budget-pill__label">Budget</span>
+          <span class="budget-pill__value">$100.0M</span>
+        </div>
+        <div class="update-indicator" id="update-indicator" title="Data sync status">
+          <span class="update-indicator__dot"></span>
+          <span class="update-indicator__text">Synced</span>
+        </div>
+        <button class="btn btn--sm" id="guest-profile-btn" style="display:none">Guest Profile</button>
+        <button class="btn btn--signin" id="guest-signin-btn" style="display:none">Sign In / Sign Up</button>
+        <div class="user-menu" id="user-menu">
+          <button class="user-menu__btn" id="user-menu-btn">
+            <span class="user-menu__avatar" id="user-avatar">?</span>
+            <span class="user-menu__name" id="user-display-name">User</span>
+          </button>
+          <div class="user-menu__dropdown" id="user-dropdown" hidden>
+            <div class="user-menu__info">
+              <div class="user-menu__info-name" id="dropdown-name">User</div>
+              <div class="user-menu__info-email" id="dropdown-email">user@example.com</div>
+              <div class="user-menu__info-role" id="dropdown-role"></div>
+            </div>
+            <hr class="user-menu__divider">
+            <button class="user-menu__item" id="account-settings-btn">Account Settings</button>
+            <button class="user-menu__item" id="logout-btn">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Announcement Banner -->
+    <div class="announcement-banner" id="announcement-banner" hidden>
+      <span class="announcement-banner__icon">&#128227;</span>
+      <span class="announcement-banner__text" id="announcement-banner-text"></span>
+      <button class="announcement-banner__close" id="announcement-banner-close">&times;</button>
+    </div>
+
+    <!-- Notification Bar -->
+    <div class="notification-bar" id="notification-bar" hidden>
+      <span class="notification-bar__icon">&#9432;</span>
+      <span class="notification-bar__message" id="notification-message"></span>
+      <button class="notification-bar__close" id="notification-close">&times;</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Dashboard View -->
+      <section class="view active" id="view-dashboard">
+        <div class="dashboard-grid">
+          <div class="card card--hero" id="hero-next-race"></div>
+          <div class="stats-row" id="stats-row"></div>
+
+          <div class="card card--team-summary">
+            <div class="card__header">
+              <h2>My Team</h2>
+              <span class="card__badge" id="team-points-total">0 pts</span>
+            </div>
+            <div class="card__body">
+              <div class="team-mini" id="team-mini-list">
+                <p class="text-muted">No team selected yet.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--hook-log">
+            <div class="card__header">
+              <h2>Live Update Log</h2>
+              <button class="btn btn--sm" id="force-sync-btn">Force Sync</button>
+            </div>
+            <div class="card__body">
+              <ul class="hook-log" id="hook-log-list">
+                <li class="hook-log__item">
+                  <span class="hook-log__time">--:--</span>
+                  <span class="hook-log__msg hook-log__msg--info">Initializing...</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card card--points-chart">
+            <div class="card__header"><h2>Season Points Tracker</h2></div>
+            <div class="card__body">
+              <canvas id="points-chart" width="600" height="200"></canvas>
+            </div>
+          </div>
+
+          <div class="card card--market">
+            <div class="card__header">
+              <h2>Driver Market</h2>
+              <span class="card__badge">20 Drivers</span>
+            </div>
+            <div class="card__body">
+              <div class="market-grid" id="driver-market"></div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / -1">
+            <div class="card__header">
+              <h2>Constructors</h2>
+              <span class="card__badge">10 Teams</span>
+            </div>
+            <div class="card__body">
+              <div id="constructor-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- My Team View -->
+      <section class="view" id="view-my-team">
+        <div class="team-builder">
+          <div class="team-builder__header">
+            <h2>Team Management</h2>
+            <div class="team-builder__meta">
+              <div class="meta-item">
+                <span class="meta-item__label">Budget Remaining</span>
+                <span class="meta-item__value" id="team-budget">$100.0M</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-item__label">Free Transfers</span>
+                <span class="meta-item__value" id="team-transfers">2</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-item__label">Team Points</span>
+                <span class="meta-item__value" id="team-total-points">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="boost-section">
+            <h3>Boosts &amp; Chips</h3>
+            <div class="boost-chips" id="boost-chips">
+              <button class="chip" data-boost="drs" title="Double points for one driver (available each race)">
+                <span class="chip__icon">&#9889;</span>
+                <span class="chip__name">DRS Boost</span>
+                <span class="chip__desc">2x one driver</span>
+                <span class="chip__status">Available each race</span>
+              </button>
+              <button class="chip" data-boost="mega" title="Triple points for one driver (one-time use)">
+                <span class="chip__icon">&#9733;</span>
+                <span class="chip__name">Mega Driver</span>
+                <span class="chip__desc">3x one driver</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="extra-drs" title="Additional double points boost (one-time use)">
+                <span class="chip__icon">&#10024;</span>
+                <span class="chip__name">Extra DRS</span>
+                <span class="chip__desc">2x one driver</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="limitless" title="No budget cap for one race (one-time use)">
+                <span class="chip__icon">&#8734;</span>
+                <span class="chip__name">Limitless</span>
+                <span class="chip__desc">No budget cap</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="wildcard" title="Unlimited free transfers for one race (one-time use)">
+                <span class="chip__icon">&#9851;</span>
+                <span class="chip__name">Wildcard</span>
+                <span class="chip__desc">Free transfers</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="no-negative" title="No negative points scored this race (one-time use)">
+                <span class="chip__icon">&#128737;</span>
+                <span class="chip__name">No Negative</span>
+                <span class="chip__desc">Floor at 0 pts</span>
+                <span class="chip__status">Available</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="team-slots">
+            <h3>Your Drivers (5)</h3>
+            <div class="driver-slots" id="driver-slots">
+              <div class="slot slot--empty" data-slot="0"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="1"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="2"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="3"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="4"><div class="slot__placeholder">+ Select Driver</div></div>
+            </div>
+            <h3>Your Constructors (2)</h3>
+            <div class="constructor-slots" id="constructor-slots">
+              <div class="slot slot--empty slot--constructor" data-slot="0"><div class="slot__placeholder">+ Select Constructor</div></div>
+              <div class="slot slot--empty slot--constructor" data-slot="1"><div class="slot__placeholder">+ Select Constructor</div></div>
+            </div>
+          </div>
+
+          <!-- Picker Modal -->
+          <div class="picker" id="picker" hidden>
+            <div class="picker__backdrop"></div>
+            <div class="picker__panel">
+              <div class="picker__header">
+                <h3 id="picker-title">Select Driver</h3>
+                <div class="picker__filters">
+                  <input type="text" class="picker__search" id="picker-search" placeholder="Search...">
+                  <select class="picker__sort" id="picker-sort">
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="points-desc">Points: High to Low</option>
+                    <option value="name-asc">Name: A-Z</option>
+                  </select>
+                </div>
+                <button class="picker__close" id="picker-close">&times;</button>
+              </div>
+              <div class="picker__body" id="picker-body"></div>
+            </div>
+          </div>
+
+          <!-- Boost Target Selection Modal -->
+          <div class="boost-target-modal" id="boost-target-modal" hidden>
+            <div class="boost-target__backdrop"></div>
+            <div class="boost-target__panel">
+              <div class="boost-target__header">
+                <h3 id="boost-target-title">Select Driver for Boost</h3>
+                <button class="picker__close" id="boost-target-close">&times;</button>
+              </div>
+              <div class="boost-target__body" id="boost-target-body"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Leaderboard View -->
+      <section class="view" id="view-leaderboard">
+        <div class="card">
+          <div class="card__header">
+            <h2>League Standings</h2>
+            <button class="btn btn--sm" id="leaderboard-refresh">Refresh</button>
+          </div>
+          <div class="card__body">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th>Roster</th>
+                  <th>Races</th>
+                  <th>Points</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Drivers View -->
+      <section class="view" id="view-drivers">
+        <div class="card">
+          <div class="card__header">
+            <h2>All Drivers</h2>
+            <div class="view-controls">
+              <select id="drivers-team-filter">
+                <option value="all">All Teams</option>
+              </select>
+              <select id="drivers-sort">
+                <option value="points-desc">Points: High to Low</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="name-asc">Name: A-Z</option>
+              </select>
+            </div>
+          </div>
+          <div class="card__body">
+            <table class="results-table" id="drivers-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Driver</th>
+                  <th>Team</th>
+                  <th>Price</th>
+                  <th>Total Pts</th>
+                  <th>Avg Pts</th>
+                  <th>Last Race</th>
+                </tr>
+              </thead>
+              <tbody id="drivers-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Constructors View -->
+      <section class="view" id="view-constructors">
+        <div class="card">
+          <div class="card__header"><h2>All Constructors</h2></div>
+          <div class="card__body">
+            <table class="results-table" id="constructors-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Constructor</th>
+                  <th>Drivers</th>
+                  <th>Price</th>
+                  <th>Total Pts</th>
+                  <th>Quali Bonus</th>
+                  <th>Pit Stop Pts</th>
+                </tr>
+              </thead>
+              <tbody id="constructors-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Standings View -->
+      <section class="view" id="view-standings">
+        <div class="standings-grid">
+          <div class="card">
+            <div class="card__header"><h2>Driver Championship</h2></div>
+            <div class="card__body">
+              <table class="results-table" id="wdc-table">
+                <thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Pts</th></tr></thead>
+                <tbody id="wdc-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__header"><h2>Constructor Championship</h2></div>
+            <div class="card__body">
+              <table class="results-table" id="wcc-table">
+                <thead><tr><th>Pos</th><th>Constructor</th><th>Pts</th></tr></thead>
+                <tbody id="wcc-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Calendar View -->
+      <section class="view" id="view-calendar">
+        <div class="card">
+          <div class="card__header"><h2>2026 Race Calendar</h2></div>
+          <div class="card__body">
+            <div class="calendar-list" id="calendar-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin View -->
+      <section class="view" id="view-admin">
+        <div class="admin-grid">
+          <div class="card">
+            <div class="card__header"><h2>League Members</h2></div>
+            <div class="card__body">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-members-body">
+                  <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header"><h2>Announcements</h2></div>
+            <div class="card__body">
+              <form id="announcement-form" class="announcement-form">
+                <input type="text" id="announcement-input" placeholder="Write an announcement for the league..." class="announcement-form__input" required>
+                <button type="submit" class="btn btn--primary">Post</button>
+              </form>
+              <div id="admin-announcements-list" style="margin-top:1rem"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Account Settings Modal (authenticated users) -->
+    <div class="account-modal" id="account-modal" hidden>
+      <div class="account-modal__backdrop"></div>
+      <div class="account-modal__panel">
+        <div class="account-modal__header">
+          <h3>Account Settings</h3>
+          <button class="picker__close" id="account-modal-close">&times;</button>
+        </div>
+        <div class="account-modal__body">
+          <form id="account-form" class="account-form">
+            <div class="auth-field">
+              <label for="account-name">Display Name</label>
+              <input type="text" id="account-name" placeholder="Your display name" autocomplete="name">
+            </div>
+            <div class="auth-field">
+              <label for="account-email-display">Email</label>
+              <input type="email" id="account-email-display" disabled class="account-input--disabled">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--primary">Save Changes</button>
+            </div>
+            <div class="auth-error" id="account-error"></div>
+            <div class="account-success" id="account-success"></div>
+          </form>
+          <hr class="user-menu__divider" style="margin: 1.25rem 0">
+          <h4 class="account-section-title">Change Password</h4>
+          <form id="password-form" class="account-form">
+            <div class="auth-field">
+              <label for="account-new-password">New Password</label>
+              <input type="password" id="account-new-password" placeholder="At least 6 characters" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="auth-field">
+              <label for="account-confirm-password">Confirm Password</label>
+              <input type="password" id="account-confirm-password" placeholder="Repeat new password" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--sm">Update Password</button>
+            </div>
+            <div class="auth-error" id="password-error"></div>
+            <div class="account-success" id="password-success"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guest Profile Modal -->
+    <div class="account-modal" id="guest-profile-modal" hidden>
+      <div class="account-modal__backdrop"></div>
+      <div class="account-modal__panel">
+        <div class="account-modal__header">
+          <h3>Guest Profile</h3>
+          <button class="picker__close" id="guest-profile-close">&times;</button>
+        </div>
+        <div class="account-modal__body">
+          <p class="text-muted" style="margin-bottom:1rem">Your data is stored locally in this browser. Sign in to sync across devices.</p>
+          <form id="guest-profile-form" class="account-form">
+            <div class="auth-field">
+              <label for="guest-name">Display Name</label>
+              <input type="text" id="guest-name" placeholder="How you want to be known" autocomplete="name">
+            </div>
+            <div class="auth-field">
+              <label for="guest-team-name">Team Name</label>
+              <input type="text" id="guest-team-name" placeholder="Name your fantasy team">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--primary">Save Profile</button>
+            </div>
+            <div class="account-success" id="guest-profile-success"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
