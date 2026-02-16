@@ -5,7 +5,7 @@
 import { API } from './config.js';
 import { emit, on, HookEvents } from './services/hooks.js';
 import { fullSync, clearCache } from './services/api.js';
-import { saveCachedResults, saveLastSync, loadLastSync, hydrateFromCloud, clearAllData } from './services/storage.js';
+import { saveCachedResults, saveLastSync, loadLastSync, hydrateFromCloud, clearAllData, loadGuestProfile, saveGuestProfile } from './services/storage.js';
 import { processRaceWeekend } from './scoring/engine.js';
 import { initTeam } from './models/team.js';
 import { initDashboard, renderPointsChart } from './ui/dashboard.js';
@@ -14,6 +14,7 @@ import { initViews } from './ui/views.js';
 import {
   initFirebase, onAuthChanged, loadCurrentProfile, isAdmin,
   getCachedProfile, loadTeamFromCloud, logout, getAnnouncements,
+  updateDisplayName, changeUserPassword,
 } from './services/auth.js';
 import { initAuthUI } from './ui/auth.js';
 import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
@@ -225,6 +226,118 @@ async function showLatestAnnouncement() {
   }
 }
 
+// ===== Account Settings Modal =====
+
+function initAccountSettings() {
+  const settingsBtn = document.getElementById('account-settings-btn');
+  const modal = document.getElementById('account-modal');
+  const backdrop = modal.querySelector('.account-modal__backdrop');
+  const closeBtn = document.getElementById('account-modal-close');
+  const form = document.getElementById('account-form');
+  const passwordForm = document.getElementById('password-form');
+
+  settingsBtn.addEventListener('click', () => {
+    document.getElementById('user-dropdown').hidden = true;
+    const profile = getCachedProfile();
+    document.getElementById('account-name').value = profile?.displayName || '';
+    document.getElementById('account-email-display').value = profile?.email || '';
+    document.getElementById('account-error').textContent = '';
+    document.getElementById('account-success').textContent = '';
+    document.getElementById('password-error').textContent = '';
+    document.getElementById('password-success').textContent = '';
+    modal.hidden = false;
+  });
+
+  backdrop.addEventListener('click', () => { modal.hidden = true; });
+  closeBtn.addEventListener('click', () => { modal.hidden = true; });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('account-error');
+    const successEl = document.getElementById('account-success');
+    errorEl.textContent = '';
+    successEl.textContent = '';
+
+    const newName = document.getElementById('account-name').value.trim();
+    if (!newName) {
+      errorEl.textContent = 'Display name cannot be empty.';
+      return;
+    }
+
+    try {
+      await updateDisplayName(newName);
+      updateUserUI(getCachedProfile());
+      successEl.textContent = 'Display name updated.';
+    } catch (err) {
+      errorEl.textContent = err.message || 'Failed to update name.';
+    }
+  });
+
+  passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('password-error');
+    const successEl = document.getElementById('password-success');
+    errorEl.textContent = '';
+    successEl.textContent = '';
+
+    const newPass = document.getElementById('account-new-password').value;
+    const confirmPass = document.getElementById('account-confirm-password').value;
+
+    if (newPass.length < 6) {
+      errorEl.textContent = 'Password must be at least 6 characters.';
+      return;
+    }
+    if (newPass !== confirmPass) {
+      errorEl.textContent = 'Passwords do not match.';
+      return;
+    }
+
+    try {
+      await changeUserPassword(newPass);
+      successEl.textContent = 'Password updated.';
+      document.getElementById('account-new-password').value = '';
+      document.getElementById('account-confirm-password').value = '';
+    } catch (err) {
+      const msg = err.code === 'auth/requires-recent-login'
+        ? 'Please sign out and sign back in before changing your password.'
+        : (err.message || 'Failed to update password.');
+      errorEl.textContent = msg;
+    }
+  });
+}
+
+// ===== Guest Profile Modal =====
+
+function initGuestProfile() {
+  const profileBtn = document.getElementById('guest-profile-btn');
+  const modal = document.getElementById('guest-profile-modal');
+  const backdrop = modal.querySelector('.account-modal__backdrop');
+  const closeBtn = document.getElementById('guest-profile-close');
+  const form = document.getElementById('guest-profile-form');
+
+  profileBtn.addEventListener('click', () => {
+    const profile = loadGuestProfile();
+    document.getElementById('guest-name').value = profile.displayName || '';
+    document.getElementById('guest-team-name').value = profile.teamName || '';
+    document.getElementById('guest-profile-success').textContent = '';
+    modal.hidden = false;
+  });
+
+  backdrop.addEventListener('click', () => { modal.hidden = true; });
+  closeBtn.addEventListener('click', () => { modal.hidden = true; });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('guest-name').value.trim() || 'Guest';
+    const teamName = document.getElementById('guest-team-name').value.trim();
+
+    saveGuestProfile({ displayName: name, teamName, createdAt: loadGuestProfile().createdAt });
+
+    // Update visible guest name in budget pill area
+    document.getElementById('guest-profile-success').textContent = 'Profile saved.';
+  });
+}
+
 // ===== Auth-Aware Boot =====
 
 let appBooted = false;
@@ -242,9 +355,10 @@ async function showApp(user) {
   authScreen.style.display = 'none';
   appEl.style.display = '';
 
-  // Show user menu, hide guest sign-in button
+  // Show user menu, hide guest buttons
   userMenuEl.style.display = '';
   guestSigninBtn.style.display = 'none';
+  document.getElementById('guest-profile-btn').style.display = 'none';
 
   // Load profile from Firestore
   const profile = await loadCurrentProfile();
@@ -266,6 +380,7 @@ async function showApp(user) {
     initNavigation();
     initNotifications();
     initUserMenu();
+    initAccountSettings();
     initDashboard();
     initTeamUI();
     initViews();
@@ -292,9 +407,10 @@ export function enterGuestMode() {
   authScreen.style.display = 'none';
   appEl.style.display = '';
 
-  // Hide user menu, show sign-in button
+  // Hide user menu, show sign-in button and guest profile button
   userMenuEl.style.display = 'none';
   guestSigninBtn.style.display = '';
+  document.getElementById('guest-profile-btn').style.display = '';
 
   if (!appBooted) {
     initTeam();
@@ -303,6 +419,7 @@ export function enterGuestMode() {
     initDashboard();
     initTeamUI();
     initViews();
+    initGuestProfile();
     startPolling();
     appBooted = true;
 
@@ -321,6 +438,7 @@ function showAuth() {
   // Reset visibility for next login
   userMenuEl.style.display = '';
   guestSigninBtn.style.display = 'none';
+  document.getElementById('guest-profile-btn').style.display = 'none';
 }
 
 function boot() {

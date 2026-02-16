@@ -280,17 +280,26 @@ export function processRaceWeekend(raceData) {
 
 /**
  * Calculate total fantasy points for a user's team for one race.
- * Applies boosts (DRS, Mega, etc).
+ * Applies boosts (DRS, Mega, No Negative, etc).
  *
- * @param {object} team - User's team { drivers: [id,...], constructor: id }
+ * @param {object} team - User's team { drivers: [id,...], constructors: [id, id] }
  * @param {object} weekendScores - Output of processRaceWeekend
- * @param {object} boosts - Active boosts { drs: driverId, mega: driverId, ... }
+ * @param {object} boosts - Active boosts { drs: { target }, mega: { target }, 'no-negative': { active }, ... }
  * @returns {object} Team score breakdown
  */
 export function calculateTeamScore(team, weekendScores, boosts = {}) {
   const { driverScores, constructorScores } = weekendScores;
   let teamTotal = 0;
   const driverBreakdown = {};
+  const noNegative = boosts['no-negative']?.active;
+
+  // Resolve boost targets (support both old format { drs: driverId } and new { drs: { target: driverId } })
+  const getTarget = (key) => {
+    const b = boosts[key];
+    if (!b) return null;
+    if (typeof b === 'string') return b;
+    return b.target || null;
+  };
 
   for (const driverId of team.drivers) {
     if (!driverId) continue;
@@ -298,11 +307,14 @@ export function calculateTeamScore(team, weekendScores, boosts = {}) {
     if (!score) continue;
 
     let multiplier = 1;
-    if (boosts.drs === driverId) multiplier = 2;
-    if (boosts.mega === driverId) multiplier = 3;
-    if (boosts['extra-drs'] === driverId) multiplier = Math.max(multiplier, 2);
+    if (getTarget('drs') === driverId) multiplier = 2;
+    if (getTarget('mega') === driverId) multiplier = 3;
+    if (getTarget('extra-drs') === driverId) multiplier = Math.max(multiplier, 2);
 
-    const adjusted = score.total * multiplier;
+    let adjusted = score.total * multiplier;
+    // No Negative: floor individual driver score at 0
+    if (noNegative && adjusted < 0) adjusted = 0;
+
     driverBreakdown[driverId] = {
       base: score.total,
       multiplier,
@@ -312,10 +324,21 @@ export function calculateTeamScore(team, weekendScores, boosts = {}) {
     teamTotal += adjusted;
   }
 
-  // Constructor score
+  // Constructor scores (now supports 2 constructors)
+  const constructors = team.constructors || (team.constructor ? [team.constructor] : []);
   let constructorTotal = 0;
-  if (team.constructor && constructorScores[team.constructor]) {
-    constructorTotal = constructorScores[team.constructor].total;
+  const constructorBreakdown = {};
+
+  for (const cId of constructors) {
+    if (!cId) continue;
+    const cScore = constructorScores[cId];
+    if (!cScore) continue;
+
+    let cPoints = cScore.total;
+    if (noNegative && cPoints < 0) cPoints = 0;
+
+    constructorBreakdown[cId] = cPoints;
+    constructorTotal += cPoints;
   }
   teamTotal += constructorTotal;
 
@@ -323,7 +346,8 @@ export function calculateTeamScore(team, weekendScores, boosts = {}) {
     teamTotal,
     driverBreakdown,
     constructorTotal,
-    constructorId: team.constructor,
+    constructorBreakdown,
+    constructors,
   };
 }
 
