@@ -1,5 +1,8 @@
 // Local Storage Persistence Layer
 // Saves and loads fantasy team state, scoring history, and app preferences.
+// Cloud sync via Firestore is layered on top -- localStorage acts as local cache.
+
+import { saveTeamToCloud, isFirebaseReady } from './auth.js';
 
 const STORAGE_PREFIX = 'f1fantasy_';
 
@@ -12,6 +15,26 @@ const KEYS = {
   CACHED_RESULTS: `${STORAGE_PREFIX}cached_results`,
   PREFERENCES: `${STORAGE_PREFIX}preferences`,
 };
+
+// ===== Cloud Sync (debounced) =====
+
+let syncTimer = null;
+
+function scheduleCloudSync() {
+  if (!isFirebaseReady()) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const data = {
+      team: read(KEYS.TEAM),
+      scoringHistory: read(KEYS.SCORING_HISTORY) || {},
+      boosts: read(KEYS.BOOSTS) || {},
+      transfers: read(KEYS.TRANSFERS) || [],
+    };
+    saveTeamToCloud(data).catch(err => {
+      console.warn('[Storage] Cloud sync failed:', err.message);
+    });
+  }, 1500);
+}
 
 function read(key) {
   try {
@@ -44,6 +67,7 @@ export function loadTeam() {
 
 export function saveTeam(team) {
   write(KEYS.TEAM, team);
+  scheduleCloudSync();
 }
 
 // ===== Scoring History =====
@@ -56,6 +80,7 @@ export function loadScoringHistory() {
 
 export function saveScoringHistory(history) {
   write(KEYS.SCORING_HISTORY, history);
+  scheduleCloudSync();
 }
 
 export function appendRaceScore(round, scoreData) {
@@ -78,6 +103,7 @@ export function loadBoosts() {
 
 export function saveBoosts(boosts) {
   write(KEYS.BOOSTS, boosts);
+  scheduleCloudSync();
 }
 
 // ===== Transfers =====
@@ -88,6 +114,7 @@ export function loadTransferLog() {
 
 export function saveTransferLog(log) {
   write(KEYS.TRANSFERS, log);
+  scheduleCloudSync();
 }
 
 // ===== Cached Results =====
@@ -132,4 +159,15 @@ export function savePreferences(prefs) {
 
 export function clearAllData() {
   Object.values(KEYS).forEach(k => localStorage.removeItem(k));
+}
+
+// ===== Cloud Hydration =====
+// Called on login to populate localStorage from Firestore data.
+
+export function hydrateFromCloud(cloudData) {
+  if (!cloudData) return;
+  if (cloudData.team) write(KEYS.TEAM, cloudData.team);
+  if (cloudData.scoringHistory) write(KEYS.SCORING_HISTORY, cloudData.scoringHistory);
+  if (cloudData.boosts) write(KEYS.BOOSTS, cloudData.boosts);
+  if (cloudData.transfers) write(KEYS.TRANSFERS, cloudData.transfers);
 }
