@@ -10,7 +10,42 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div id="app">
+
+  <!-- Auth Screen (shown when not logged in) -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="logo__f1">F1</span>
+        <span class="logo__fantasy">FANTASY</span>
+      </div>
+      <p class="auth-subtitle">Sign in to manage your team and compete with friends</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="auth-tab-login">Sign In</button>
+        <button class="auth-tab" id="auth-tab-register">Register</button>
+      </div>
+
+      <form id="auth-form" class="auth-form">
+        <div class="auth-field" id="auth-name-group" style="display:none">
+          <label for="auth-name">Display Name</label>
+          <input type="text" id="auth-name" placeholder="How friends will see you" autocomplete="name">
+        </div>
+        <div class="auth-field">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="At least 6 characters" required autocomplete="current-password" minlength="6">
+        </div>
+        <div class="auth-error" id="auth-error"></div>
+        <button type="submit" class="btn btn--primary auth-submit" id="auth-submit">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App (hidden until authenticated) -->
+  <div id="app" style="display:none">
     <!-- Top Navigation -->
     <header class="top-bar">
       <div class="top-bar__left">
@@ -22,10 +57,12 @@
       <nav class="top-bar__nav">
         <button class="nav-btn active" data-view="dashboard">Dashboard</button>
         <button class="nav-btn" data-view="my-team">My Team</button>
+        <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
         <button class="nav-btn" data-view="drivers">Drivers</button>
         <button class="nav-btn" data-view="constructors">Constructors</button>
         <button class="nav-btn" data-view="standings">Standings</button>
         <button class="nav-btn" data-view="calendar">Calendar</button>
+        <button class="nav-btn nav-btn--admin" data-view="admin" id="nav-admin" style="display:none">Admin</button>
       </nav>
       <div class="top-bar__right">
         <div class="budget-pill" id="budget-display">
@@ -36,8 +73,30 @@
           <span class="update-indicator__dot"></span>
           <span class="update-indicator__text">Synced</span>
         </div>
+        <div class="user-menu" id="user-menu">
+          <button class="user-menu__btn" id="user-menu-btn">
+            <span class="user-menu__avatar" id="user-avatar">?</span>
+            <span class="user-menu__name" id="user-display-name">User</span>
+          </button>
+          <div class="user-menu__dropdown" id="user-dropdown" hidden>
+            <div class="user-menu__info">
+              <div class="user-menu__info-name" id="dropdown-name">User</div>
+              <div class="user-menu__info-email" id="dropdown-email">user@example.com</div>
+              <div class="user-menu__info-role" id="dropdown-role"></div>
+            </div>
+            <hr class="user-menu__divider">
+            <button class="user-menu__item" id="logout-btn">Sign Out</button>
+          </div>
+        </div>
       </div>
     </header>
+
+    <!-- Announcement Banner -->
+    <div class="announcement-banner" id="announcement-banner" hidden>
+      <span class="announcement-banner__icon">&#128227;</span>
+      <span class="announcement-banner__text" id="announcement-banner-text"></span>
+      <button class="announcement-banner__close" id="announcement-banner-close">&times;</button>
+    </div>
 
     <!-- Notification Bar -->
     <div class="notification-bar" id="notification-bar" hidden>
@@ -52,17 +111,9 @@
       <!-- Dashboard View -->
       <section class="view active" id="view-dashboard">
         <div class="dashboard-grid">
-          <!-- Hero Next Race Banner -->
-          <div class="card card--hero" id="hero-next-race">
-            <!-- Dynamically populated by dashboard.js -->
-          </div>
+          <div class="card card--hero" id="hero-next-race"></div>
+          <div class="stats-row" id="stats-row"></div>
 
-          <!-- Stats Row -->
-          <div class="stats-row" id="stats-row">
-            <!-- Dynamically populated -->
-          </div>
-
-          <!-- Team Summary Card -->
           <div class="card card--team-summary">
             <div class="card__header">
               <h2>My Team</h2>
@@ -75,7 +126,6 @@
             </div>
           </div>
 
-          <!-- Hook Activity Log -->
           <div class="card card--hook-log">
             <div class="card__header">
               <h2>Live Update Log</h2>
@@ -91,39 +141,30 @@
             </div>
           </div>
 
-          <!-- Season Points Chart -->
           <div class="card card--points-chart">
-            <div class="card__header">
-              <h2>Season Points Tracker</h2>
-            </div>
+            <div class="card__header"><h2>Season Points Tracker</h2></div>
             <div class="card__body">
               <canvas id="points-chart" width="600" height="200"></canvas>
             </div>
           </div>
 
-          <!-- Driver Market Grid -->
           <div class="card card--market">
             <div class="card__header">
               <h2>Driver Market</h2>
               <span class="card__badge">20 Drivers</span>
             </div>
             <div class="card__body">
-              <div class="market-grid" id="driver-market">
-                <!-- Dynamically populated -->
-              </div>
+              <div class="market-grid" id="driver-market"></div>
             </div>
           </div>
 
-          <!-- Constructors -->
           <div class="card" style="grid-column: 1 / -1">
             <div class="card__header">
               <h2>Constructors</h2>
               <span class="card__badge">10 Teams</span>
             </div>
             <div class="card__body">
-              <div id="constructor-list">
-                <!-- Dynamically populated -->
-              </div>
+              <div id="constructor-list"></div>
             </div>
           </div>
         </div>
@@ -150,7 +191,6 @@
             </div>
           </div>
 
-          <!-- Boost Chips -->
           <div class="boost-section">
             <h3>Boosts &amp; Chips</h3>
             <div class="boost-chips" id="boost-chips">
@@ -177,25 +217,14 @@
             </div>
           </div>
 
-          <!-- Selected Team -->
           <div class="team-slots">
             <h3>Your Drivers (5)</h3>
             <div class="driver-slots" id="driver-slots">
-              <div class="slot slot--empty" data-slot="0">
-                <div class="slot__placeholder">+ Select Driver</div>
-              </div>
-              <div class="slot slot--empty" data-slot="1">
-                <div class="slot__placeholder">+ Select Driver</div>
-              </div>
-              <div class="slot slot--empty" data-slot="2">
-                <div class="slot__placeholder">+ Select Driver</div>
-              </div>
-              <div class="slot slot--empty" data-slot="3">
-                <div class="slot__placeholder">+ Select Driver</div>
-              </div>
-              <div class="slot slot--empty" data-slot="4">
-                <div class="slot__placeholder">+ Select Driver</div>
-              </div>
+              <div class="slot slot--empty" data-slot="0"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="1"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="2"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="3"><div class="slot__placeholder">+ Select Driver</div></div>
+              <div class="slot slot--empty" data-slot="4"><div class="slot__placeholder">+ Select Driver</div></div>
             </div>
             <h3>Your Constructor (1)</h3>
             <div class="constructor-slots" id="constructor-slots">
@@ -205,7 +234,6 @@
             </div>
           </div>
 
-          <!-- Driver/Constructor Picker Modal -->
           <div class="picker" id="picker" hidden>
             <div class="picker__backdrop"></div>
             <div class="picker__panel">
@@ -222,10 +250,35 @@
                 </div>
                 <button class="picker__close" id="picker-close">&times;</button>
               </div>
-              <div class="picker__body" id="picker-body">
-                <!-- Dynamically populated -->
-              </div>
+              <div class="picker__body" id="picker-body"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Leaderboard View -->
+      <section class="view" id="view-leaderboard">
+        <div class="card">
+          <div class="card__header">
+            <h2>League Standings</h2>
+            <button class="btn btn--sm" id="leaderboard-refresh">Refresh</button>
+          </div>
+          <div class="card__body">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th>Roster</th>
+                  <th>Races</th>
+                  <th>Points</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -269,9 +322,7 @@
       <!-- Constructors View -->
       <section class="view" id="view-constructors">
         <div class="card">
-          <div class="card__header">
-            <h2>All Constructors</h2>
-          </div>
+          <div class="card__header"><h2>All Constructors</h2></div>
           <div class="card__body">
             <table class="results-table" id="constructors-table">
               <thead>
@@ -295,36 +346,19 @@
       <section class="view" id="view-standings">
         <div class="standings-grid">
           <div class="card">
-            <div class="card__header">
-              <h2>Driver Championship</h2>
-            </div>
+            <div class="card__header"><h2>Driver Championship</h2></div>
             <div class="card__body">
               <table class="results-table" id="wdc-table">
-                <thead>
-                  <tr>
-                    <th>Pos</th>
-                    <th>Driver</th>
-                    <th>Team</th>
-                    <th>Pts</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Pts</th></tr></thead>
                 <tbody id="wdc-table-body"></tbody>
               </table>
             </div>
           </div>
           <div class="card">
-            <div class="card__header">
-              <h2>Constructor Championship</h2>
-            </div>
+            <div class="card__header"><h2>Constructor Championship</h2></div>
             <div class="card__body">
               <table class="results-table" id="wcc-table">
-                <thead>
-                  <tr>
-                    <th>Pos</th>
-                    <th>Constructor</th>
-                    <th>Pts</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Pos</th><th>Constructor</th><th>Pts</th></tr></thead>
                 <tbody id="wcc-table-body"></tbody>
               </table>
             </div>
@@ -335,12 +369,44 @@
       <!-- Calendar View -->
       <section class="view" id="view-calendar">
         <div class="card">
-          <div class="card__header">
-            <h2>2025 Race Calendar</h2>
-          </div>
+          <div class="card__header"><h2>2025 Race Calendar</h2></div>
           <div class="card__body">
-            <div class="calendar-list" id="calendar-list">
-              <!-- Dynamically populated -->
+            <div class="calendar-list" id="calendar-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin View -->
+      <section class="view" id="view-admin">
+        <div class="admin-grid">
+          <div class="card">
+            <div class="card__header"><h2>League Members</h2></div>
+            <div class="card__body">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Points</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-members-body">
+                  <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header"><h2>Announcements</h2></div>
+            <div class="card__body">
+              <form id="announcement-form" class="announcement-form">
+                <input type="text" id="announcement-input" placeholder="Write an announcement for the league..." class="announcement-form__input" required>
+                <button type="submit" class="btn btn--primary">Post</button>
+              </form>
+              <div id="admin-announcements-list" style="margin-top:1rem"></div>
             </div>
           </div>
         </div>
@@ -348,6 +414,11 @@
 
     </main>
   </div>
+
+  <!-- Firebase SDK (compat for vanilla JS) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
   <script type="module" src="js/app.js"></script>
 </body>

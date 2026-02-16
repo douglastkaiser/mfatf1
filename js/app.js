@@ -1,16 +1,28 @@
 // F1 Fantasy App - Main Entry Point
-// Initializes all modules, sets up navigation, starts data polling,
-// and wires up the hook system for live updates.
+// Initializes Firebase auth, all modules, sets up navigation,
+// starts data polling, and wires up the hook system for live updates.
 
 import { API } from './config.js';
 import { emit, on, HookEvents } from './services/hooks.js';
 import { fullSync, clearCache } from './services/api.js';
-import { saveCachedResults, saveLastSync, loadLastSync } from './services/storage.js';
+import { saveCachedResults, saveLastSync, loadLastSync, hydrateFromCloud, clearAllData } from './services/storage.js';
 import { processRaceWeekend } from './scoring/engine.js';
 import { initTeam } from './models/team.js';
 import { initDashboard, renderPointsChart } from './ui/dashboard.js';
 import { initTeamUI } from './ui/team.js';
 import { initViews } from './ui/views.js';
+import {
+  initFirebase, onAuthChanged, loadCurrentProfile, isAdmin,
+  getCachedProfile, loadTeamFromCloud, logout, getAnnouncements,
+} from './services/auth.js';
+import { initAuthUI } from './ui/auth.js';
+import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
+import { initAdmin } from './ui/admin.js';
+
+// ===== DOM References =====
+
+const authScreen = document.getElementById('auth-screen');
+const appEl = document.getElementById('app');
 
 // ===== Navigation =====
 
@@ -27,9 +39,11 @@ function initNavigation() {
 
       views.forEach(v => v.classList.toggle('active', v.id === viewId));
 
-      // Re-render chart when dashboard is shown (canvas sizing)
       if (btn.dataset.view === 'dashboard') {
         requestAnimationFrame(() => renderPointsChart());
+      }
+      if (btn.dataset.view === 'leaderboard') {
+        renderLeaderboard();
       }
     });
   });
@@ -56,7 +70,6 @@ function initNotifications() {
 }
 
 // ===== Data Sync Pipeline =====
-// The core update hook: poll for new data, cache it, score it.
 
 let pollTimer = null;
 
@@ -64,7 +77,6 @@ async function runSync() {
   try {
     const data = await fullSync();
 
-    // Cache successful results for offline/fast reload
     const cachePayload = {
       schedule: data.schedule || [],
       raceResults: data.raceResults || [],
@@ -76,7 +88,6 @@ async function runSync() {
     saveCachedResults(cachePayload);
     saveLastSync();
 
-    // Process scoring for each race that has results
     if (data.raceResults && data.raceResults.length > 0) {
       for (const race of data.raceResults) {
         const round = race.round;
@@ -109,10 +120,7 @@ async function runSync() {
 }
 
 function startPolling() {
-  // Initial sync
   runSync();
-
-  // Periodic polling
   pollTimer = setInterval(runSync, API.POLL_INTERVAL_MS);
 }
 
@@ -132,13 +140,12 @@ window.addEventListener('f1fantasy:forcesync', () => {
 });
 
 // ===== Visibility-Based Polling =====
-// Pause polling when tab is hidden, resume when visible.
 
 document.addEventListener('visibilitychange', () => {
+  if (!appEl.style.display || appEl.style.display === 'none') return;
   if (document.hidden) {
     stopPolling();
   } else {
-    // Check if we need a fresh sync
     const lastSync = loadLastSync();
     if (!lastSync || Date.now() - new Date(lastSync).getTime() > API.CACHE_TTL_MS) {
       clearCache();
@@ -147,18 +154,164 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ===== Boot =====
+// ===== User Menu =====
+
+function initUserMenu() {
+  const menuBtn = document.getElementById('user-menu-btn');
+  const dropdown = document.getElementById('user-dropdown');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.hidden = !dropdown.hidden;
+  });
+
+  document.addEventListener('click', () => {
+    dropdown.hidden = true;
+  });
+
+  dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+  logoutBtn.addEventListener('click', async () => {
+    stopPolling();
+    clearAllData();
+    await logout();
+  });
+}
+
+function updateUserUI(profile) {
+  const nameEl = document.getElementById('user-display-name');
+  const avatarEl = document.getElementById('user-avatar');
+  const dropdownName = document.getElementById('dropdown-name');
+  const dropdownEmail = document.getElementById('dropdown-email');
+  const dropdownRole = document.getElementById('dropdown-role');
+  const adminNav = document.getElementById('nav-admin');
+
+  const name = profile?.displayName || 'User';
+  nameEl.textContent = name;
+  avatarEl.textContent = name.charAt(0).toUpperCase();
+  dropdownName.textContent = name;
+  dropdownEmail.textContent = profile?.email || '';
+
+  if (profile?.role === 'admin') {
+    dropdownRole.textContent = 'Commissioner';
+    dropdownRole.style.display = 'block';
+    adminNav.style.display = '';
+  } else {
+    dropdownRole.textContent = '';
+    dropdownRole.style.display = 'none';
+    adminNav.style.display = 'none';
+  }
+}
+
+// ===== Announcement Banner =====
+
+async function showLatestAnnouncement() {
+  try {
+    const announcements = await getAnnouncements(1);
+    if (announcements.length === 0) return;
+
+    const latest = announcements[0];
+    const banner = document.getElementById('announcement-banner');
+    const text = document.getElementById('announcement-banner-text');
+    const closeBtn = document.getElementById('announcement-banner-close');
+
+    text.textContent = `${latest.author}: ${latest.text}`;
+    banner.hidden = false;
+
+    closeBtn.addEventListener('click', () => { banner.hidden = true; });
+  } catch {
+    // Silently fail
+  }
+}
+
+// ===== Auth-Aware Boot =====
+
+let appBooted = false;
+
+async function showApp(user) {
+  authScreen.style.display = 'none';
+  appEl.style.display = '';
+
+  // Load profile from Firestore
+  const profile = await loadCurrentProfile();
+  updateUserUI(profile);
+
+  // Pull cloud data into localStorage if available
+  try {
+    const cloudData = await loadTeamFromCloud();
+    if (cloudData && cloudData.team) {
+      hydrateFromCloud(cloudData);
+    }
+  } catch (err) {
+    console.warn('[App] Could not load cloud data:', err.message);
+  }
+
+  if (!appBooted) {
+    // First boot: initialize everything
+    initTeam();
+    initNavigation();
+    initNotifications();
+    initUserMenu();
+    initDashboard();
+    initTeamUI();
+    initViews();
+    initLeaderboard();
+
+    if (isAdmin()) {
+      initAdmin();
+    }
+
+    startPolling();
+    showLatestAnnouncement();
+    appBooted = true;
+
+    console.log('[F1 Fantasy] App initialized. Polling every', API.POLL_INTERVAL_MS / 1000, 'seconds.');
+  } else {
+    // Returning from logout/login cycle: re-init team data
+    initTeam();
+    startPolling();
+  }
+}
+
+function showAuth() {
+  stopPolling();
+  authScreen.style.display = '';
+  appEl.style.display = 'none';
+}
 
 function boot() {
-  initTeam();
-  initNavigation();
-  initNotifications();
-  initDashboard();
-  initTeamUI();
-  initViews();
-  startPolling();
+  // Initialize auth UI (login/register form)
+  initAuthUI();
 
-  console.log('[F1 Fantasy] App initialized. Polling every', API.POLL_INTERVAL_MS / 1000, 'seconds.');
+  // Try to initialize Firebase
+  const firebaseOk = initFirebase();
+
+  if (!firebaseOk) {
+    // Firebase not configured - show app without auth (dev/local mode)
+    console.warn('[App] Running without Firebase. Configure firebase-config.js to enable auth.');
+    authScreen.style.display = 'none';
+    appEl.style.display = '';
+
+    initTeam();
+    initNavigation();
+    initNotifications();
+    initDashboard();
+    initTeamUI();
+    initViews();
+    startPolling();
+    appBooted = true;
+    return;
+  }
+
+  // Listen for auth state changes
+  onAuthChanged(async (user) => {
+    if (user) {
+      await showApp(user);
+    } else {
+      showAuth();
+    }
+  });
 }
 
 if (document.readyState === 'loading') {
