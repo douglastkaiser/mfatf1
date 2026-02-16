@@ -1307,6 +1307,52 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   flex-shrink: 0;
 }
 
+/* Guest mode button on auth screen */
+.auth-guest-btn {
+  display: block;
+  width: 100%;
+  padding: 0.7rem;
+  background: transparent;
+  border: 1px dashed var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-guest-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.auth-guest-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Sign-in button shown in top bar during guest mode */
+.btn--signin {
+  font-size: 0.8rem;
+  padding: 0.4rem 1.1rem;
+  background: var(--gradient-red);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px var(--accent-red-glow);
+  white-space: nowrap;
+}
+
+.btn--signin:hover {
+  box-shadow: 0 4px 16px var(--accent-red-glow);
+  transform: translateY(-1px);
+}
+
 /* ===== User Menu ===== */
 .user-menu {
   position: relative;
