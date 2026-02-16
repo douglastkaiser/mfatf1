@@ -108,6 +108,8 @@ function formatAuthError(err) {
       return 'Too many attempts. Please wait a moment and try again.';
     case 'auth/popup-blocked':
       return 'Pop-up was blocked. Please allow pop-ups for this site.';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized for sign-in. The site administrator needs to add this domain in the Firebase Console under Authentication > Settings > Authorized domains.';
     case 'auth/account-exists-with-different-credential':
       return 'An account already exists with this email using a different sign-in method.';
     default:
