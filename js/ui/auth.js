@@ -1,7 +1,7 @@
 // Auth UI
-// Login and registration screen logic.
+// Login and registration screen logic with email/password and Google Sign-In.
 
-import { register, login } from '../services/auth.js';
+import { register, login, loginWithGoogle } from '../services/auth.js';
 
 let currentTab = 'login';
 
@@ -9,15 +9,16 @@ export function initAuthUI() {
   const loginTab = document.getElementById('auth-tab-login');
   const registerTab = document.getElementById('auth-tab-register');
   const form = document.getElementById('auth-form');
-  const nameGroup = document.getElementById('auth-name-group');
   const submitBtn = document.getElementById('auth-submit');
   const errorEl = document.getElementById('auth-error');
+  const googleBtn = document.getElementById('auth-google-btn');
 
   if (!form) return;
 
   loginTab.addEventListener('click', () => switchTab('login'));
   registerTab.addEventListener('click', () => switchTab('register'));
 
+  // Email/Password form
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorEl.textContent = '';
@@ -46,6 +47,23 @@ export function initAuthUI() {
       submitBtn.textContent = currentTab === 'login' ? 'Sign In' : 'Create Account';
     }
   });
+
+  // Google Sign-In
+  if (googleBtn) {
+    googleBtn.addEventListener('click', async () => {
+      errorEl.textContent = '';
+      googleBtn.disabled = true;
+
+      try {
+        await loginWithGoogle();
+      } catch (err) {
+        if (err.code !== 'auth/popup-closed-by-user') {
+          errorEl.textContent = formatAuthError(err);
+        }
+        googleBtn.disabled = false;
+      }
+    });
+  }
 }
 
 function switchTab(tab) {
@@ -79,6 +97,10 @@ function formatAuthError(err) {
       return 'Password must be at least 6 characters.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a moment and try again.';
+    case 'auth/popup-blocked':
+      return 'Pop-up was blocked. Please allow pop-ups for this site.';
+    case 'auth/account-exists-with-different-credential':
+      return 'An account already exists with this email using a different sign-in method.';
     default:
       return err.message || 'An error occurred. Please try again.';
   }

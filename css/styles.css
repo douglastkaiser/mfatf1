@@ -1252,6 +1252,61 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   cursor: wait;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.auth-divider span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0.7rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-google-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.auth-google-btn__icon {
+  flex-shrink: 0;
+}
+
 /* ===== User Menu ===== */
 .user-menu {
   position: relative;
