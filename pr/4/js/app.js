@@ -228,10 +228,23 @@ async function showLatestAnnouncement() {
 // ===== Auth-Aware Boot =====
 
 let appBooted = false;
+let guestMode = false;
+
+export function isGuestMode() {
+  return guestMode;
+}
+
+const guestSigninBtn = document.getElementById('guest-signin-btn');
+const userMenuEl = document.getElementById('user-menu');
 
 async function showApp(user) {
+  guestMode = false;
   authScreen.style.display = 'none';
   appEl.style.display = '';
+
+  // Show user menu, hide guest sign-in button
+  userMenuEl.style.display = '';
+  guestSigninBtn.style.display = 'none';
 
   // Load profile from Firestore
   const profile = await loadCurrentProfile();
@@ -274,15 +287,50 @@ async function showApp(user) {
   }
 }
 
+export function enterGuestMode() {
+  guestMode = true;
+  authScreen.style.display = 'none';
+  appEl.style.display = '';
+
+  // Hide user menu, show sign-in button
+  userMenuEl.style.display = 'none';
+  guestSigninBtn.style.display = '';
+
+  if (!appBooted) {
+    initTeam();
+    initNavigation();
+    initNotifications();
+    initDashboard();
+    initTeamUI();
+    initViews();
+    startPolling();
+    appBooted = true;
+
+    console.log('[F1 Fantasy] App initialized in guest mode.');
+  } else {
+    startPolling();
+  }
+}
+
 function showAuth() {
+  guestMode = false;
   stopPolling();
   authScreen.style.display = '';
   appEl.style.display = 'none';
+
+  // Reset visibility for next login
+  userMenuEl.style.display = '';
+  guestSigninBtn.style.display = 'none';
 }
 
 function boot() {
   // Initialize auth UI (login/register form)
   initAuthUI();
+
+  // Guest sign-in button in the header returns to auth screen
+  guestSigninBtn.addEventListener('click', () => {
+    showAuth();
+  });
 
   // Try to initialize Firebase
   const firebaseOk = initFirebase();
@@ -309,7 +357,10 @@ function boot() {
     if (user) {
       await showApp(user);
     } else {
-      showAuth();
+      // Only show auth screen if not in guest mode
+      if (!guestMode) {
+        showAuth();
+      }
     }
   });
 }

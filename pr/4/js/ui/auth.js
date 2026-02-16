@@ -2,6 +2,7 @@
 // Login and registration screen logic with email/password and Google Sign-In.
 
 import { register, login, loginWithGoogle } from '../services/auth.js';
+import { enterGuestMode } from '../app.js';
 
 let currentTab = 'login';
 
@@ -12,8 +13,16 @@ export function initAuthUI() {
   const submitBtn = document.getElementById('auth-submit');
   const errorEl = document.getElementById('auth-error');
   const googleBtn = document.getElementById('auth-google-btn');
+  const guestBtn = document.getElementById('auth-guest-btn');
 
   if (!form) return;
+
+  // Continue as Guest
+  if (guestBtn) {
+    guestBtn.addEventListener('click', () => {
+      enterGuestMode();
+    });
+  }
 
   loginTab.addEventListener('click', () => switchTab('login'));
   registerTab.addEventListener('click', () => switchTab('register'));
