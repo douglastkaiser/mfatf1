@@ -257,12 +257,16 @@ function openBoostTargetModal(boostType) {
     });
   });
 
-  modal.hidden = false;
+  modal.removeAttribute('hidden');
+  modal.style.display = 'flex';
 }
 
 function closeBoostTargetModal() {
   const modal = document.getElementById('boost-target-modal');
-  if (modal) modal.hidden = true;
+  if (modal) {
+    modal.setAttribute('hidden', '');
+    modal.style.display = 'none';
+  }
   pendingBoostType = null;
 }
 
@@ -291,13 +295,16 @@ function openPicker(mode, slot = null) {
 
   title.textContent = mode === 'driver' ? 'Select Driver' : 'Select Constructor';
   search.value = '';
-  picker.hidden = false;
+  picker.removeAttribute('hidden');
+  picker.style.display = 'flex';
 
   renderPickerItems();
 }
 
 function closePicker() {
-  document.getElementById('picker').hidden = true;
+  const picker = document.getElementById('picker');
+  picker.setAttribute('hidden', '');
+  picker.style.display = 'none';
   pickerMode = null;
   pickerSlot = null;
 }
