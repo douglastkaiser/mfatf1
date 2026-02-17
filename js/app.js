@@ -226,6 +226,18 @@ async function showLatestAnnouncement() {
   }
 }
 
+// ===== Modal Helpers =====
+
+function showModal(el) {
+  el.removeAttribute('hidden');
+  el.style.display = 'flex';
+}
+
+function hideModal(el) {
+  el.setAttribute('hidden', '');
+  el.style.display = 'none';
+}
+
 // ===== Account Settings Modal =====
 
 function initAccountSettings() {
@@ -245,11 +257,11 @@ function initAccountSettings() {
     document.getElementById('account-success').textContent = '';
     document.getElementById('password-error').textContent = '';
     document.getElementById('password-success').textContent = '';
-    modal.hidden = false;
+    showModal(modal);
   });
 
-  backdrop.addEventListener('click', () => { modal.hidden = true; });
-  closeBtn.addEventListener('click', () => { modal.hidden = true; });
+  backdrop.addEventListener('click', () => hideModal(modal));
+  closeBtn.addEventListener('click', () => hideModal(modal));
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -268,6 +280,7 @@ function initAccountSettings() {
       await updateDisplayName(newName);
       updateUserUI(getCachedProfile());
       successEl.textContent = 'Display name updated.';
+      setTimeout(() => hideModal(modal), 800);
     } catch (err) {
       errorEl.textContent = err.message || 'Failed to update name.';
     }
@@ -297,6 +310,7 @@ function initAccountSettings() {
       successEl.textContent = 'Password updated.';
       document.getElementById('account-new-password').value = '';
       document.getElementById('account-confirm-password').value = '';
+      setTimeout(() => hideModal(modal), 800);
     } catch (err) {
       const msg = err.code === 'auth/requires-recent-login'
         ? 'Please sign out and sign back in before changing your password.'
@@ -320,11 +334,11 @@ function initGuestProfile() {
     document.getElementById('guest-name').value = profile.displayName || '';
     document.getElementById('guest-team-name').value = profile.teamName || '';
     document.getElementById('guest-profile-success').textContent = '';
-    modal.hidden = false;
+    showModal(modal);
   });
 
-  backdrop.addEventListener('click', () => { modal.hidden = true; });
-  closeBtn.addEventListener('click', () => { modal.hidden = true; });
+  backdrop.addEventListener('click', () => hideModal(modal));
+  closeBtn.addEventListener('click', () => hideModal(modal));
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -333,8 +347,8 @@ function initGuestProfile() {
 
     saveGuestProfile({ displayName: name, teamName, createdAt: loadGuestProfile().createdAt });
 
-    // Update visible guest name in budget pill area
     document.getElementById('guest-profile-success').textContent = 'Profile saved.';
+    setTimeout(() => hideModal(modal), 600);
   });
 }
 
