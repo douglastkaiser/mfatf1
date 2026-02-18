@@ -11,6 +11,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  updatePassword,
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js';
 import {
   getFirestore,
@@ -262,4 +263,31 @@ export async function getAnnouncements(maxResults = 20) {
 export async function deleteAnnouncement(id) {
   if (!db) return;
   await deleteDoc(doc(db, 'announcements', id));
+}
+
+// ===== Account Management =====
+
+export async function updateDisplayName(newName) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Not signed in');
+
+  // Update Firebase Auth profile
+  await updateProfile(user, { displayName: newName });
+
+  // Update Firestore document
+  if (db) {
+    await updateDoc(doc(db, 'users', user.uid), { displayName: newName });
+  }
+
+  // Update cached profile
+  if (currentProfile) {
+    currentProfile.displayName = newName;
+  }
+}
+
+export async function changeUserPassword(newPassword) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Not signed in');
+
+  await updatePassword(user, newPassword);
 }

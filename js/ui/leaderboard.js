@@ -29,14 +29,15 @@ export async function renderLeaderboard() {
       const racesScored = Object.keys(history).length;
       const team = u.team || {};
       const driverCount = (team.drivers || []).filter(Boolean).length;
-      const hasConstructor = !!team.constructor;
+      const constructors = team.constructors || (team.constructor ? [team.constructor] : []);
+      const constructorCount = constructors.filter(Boolean).length;
 
       return {
         ...u,
         totalPoints,
         racesScored,
         driverCount,
-        hasConstructor,
+        constructorCount,
         teamValue: calculateTeamValue(team),
       };
     });
@@ -63,12 +64,13 @@ export async function renderLeaderboard() {
         return d ? d.code : '?';
       }).join(', ');
 
-      const teamConstructor = user.team?.constructor
-        ? CONSTRUCTORS.find(c => c.id === user.team.constructor)?.shortName || ''
-        : '';
+      const userConstructors = user.team?.constructors || (user.team?.constructor ? [user.team.constructor] : []);
+      const teamConstructors = userConstructors.filter(Boolean).map(id => {
+        return CONSTRUCTORS.find(c => c.id === id)?.shortName || '?';
+      }).join(', ');
 
-      const teamDisplay = teamDrivers || teamConstructor
-        ? `${teamDrivers}${teamConstructor ? ' + ' + teamConstructor : ''}`
+      const teamDisplay = teamDrivers || teamConstructors
+        ? `${teamDrivers}${teamConstructors ? ' + ' + teamConstructors : ''}`
         : '<span style="color:var(--text-muted)">No team</span>';
 
       return `
@@ -82,7 +84,7 @@ export async function renderLeaderboard() {
             </div>
           </td>
           <td class="leaderboard-team-cell">${teamDisplay}</td>
-          <td style="text-align:center">${user.driverCount}/5${user.hasConstructor ? ' + 1' : ''}</td>
+          <td style="text-align:center">${user.driverCount}/5 + ${user.constructorCount}/2</td>
           <td style="text-align:center">${user.racesScored}</td>
           <td><strong class="points-positive">${user.totalPoints}</strong></td>
         </tr>
@@ -102,8 +104,10 @@ function calculateTeamValue(team) {
     const d = DRIVERS.find(d => d.id === id);
     if (d) value += d.price;
   }
-  if (team.constructor) {
-    const c = CONSTRUCTORS.find(c => c.id === team.constructor);
+  const constructors = team.constructors || (team.constructor ? [team.constructor] : []);
+  for (const cId of constructors) {
+    if (!cId) continue;
+    const c = CONSTRUCTORS.find(c => c.id === cId);
     if (c) value += c.price;
   }
   return value;

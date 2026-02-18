@@ -96,6 +96,7 @@
           <span class="update-indicator__dot"></span>
           <span class="update-indicator__text">Synced</span>
         </div>
+        <button class="btn btn--sm" id="guest-profile-btn" style="display:none">Guest Profile</button>
         <button class="btn btn--signin" id="guest-signin-btn" style="display:none">Sign In / Sign Up</button>
         <div class="user-menu" id="user-menu">
           <button class="user-menu__btn" id="user-menu-btn">
@@ -109,6 +110,7 @@
               <div class="user-menu__info-role" id="dropdown-role"></div>
             </div>
             <hr class="user-menu__divider">
+            <button class="user-menu__item" id="account-settings-btn">Account Settings</button>
             <button class="user-menu__item" id="logout-btn">Sign Out</button>
           </div>
         </div>
@@ -218,24 +220,40 @@
           <div class="boost-section">
             <h3>Boosts &amp; Chips</h3>
             <div class="boost-chips" id="boost-chips">
-              <button class="chip" data-boost="drs" title="Double points for one driver">
+              <button class="chip" data-boost="drs" title="Double points for one driver (available each race)">
                 <span class="chip__icon">&#9889;</span>
                 <span class="chip__name">DRS Boost</span>
+                <span class="chip__desc">2x one driver</span>
                 <span class="chip__status">Available each race</span>
               </button>
-              <button class="chip" data-boost="mega" title="Triple points for one driver">
+              <button class="chip" data-boost="mega" title="Triple points for one driver (one-time use)">
                 <span class="chip__icon">&#9733;</span>
                 <span class="chip__name">Mega Driver</span>
+                <span class="chip__desc">3x one driver</span>
                 <span class="chip__status">Available</span>
               </button>
-              <button class="chip" data-boost="extra-drs" title="Additional double points boost">
+              <button class="chip" data-boost="extra-drs" title="Additional double points boost (one-time use)">
                 <span class="chip__icon">&#10024;</span>
                 <span class="chip__name">Extra DRS</span>
+                <span class="chip__desc">2x one driver</span>
                 <span class="chip__status">Available</span>
               </button>
-              <button class="chip" data-boost="limitless" title="No budget cap for one race">
+              <button class="chip" data-boost="limitless" title="No budget cap for one race (one-time use)">
                 <span class="chip__icon">&#8734;</span>
                 <span class="chip__name">Limitless</span>
+                <span class="chip__desc">No budget cap</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="wildcard" title="Unlimited free transfers for one race (one-time use)">
+                <span class="chip__icon">&#9851;</span>
+                <span class="chip__name">Wildcard</span>
+                <span class="chip__desc">Free transfers</span>
+                <span class="chip__status">Available</span>
+              </button>
+              <button class="chip" data-boost="no-negative" title="No negative points scored this race (one-time use)">
+                <span class="chip__icon">&#128737;</span>
+                <span class="chip__name">No Negative</span>
+                <span class="chip__desc">Floor at 0 pts</span>
                 <span class="chip__status">Available</span>
               </button>
             </div>
@@ -250,15 +268,15 @@
               <div class="slot slot--empty" data-slot="3"><div class="slot__placeholder">+ Select Driver</div></div>
               <div class="slot slot--empty" data-slot="4"><div class="slot__placeholder">+ Select Driver</div></div>
             </div>
-            <h3>Your Constructor (1)</h3>
+            <h3>Your Constructors (2)</h3>
             <div class="constructor-slots" id="constructor-slots">
-              <div class="slot slot--empty slot--constructor" data-slot="constructor">
-                <div class="slot__placeholder">+ Select Constructor</div>
-              </div>
+              <div class="slot slot--empty slot--constructor" data-slot="0"><div class="slot__placeholder">+ Select Constructor</div></div>
+              <div class="slot slot--empty slot--constructor" data-slot="1"><div class="slot__placeholder">+ Select Constructor</div></div>
             </div>
           </div>
 
-          <div class="picker" id="picker" hidden>
+          <!-- Picker Modal -->
+          <div class="picker" id="picker" hidden style="display:none">
             <div class="picker__backdrop"></div>
             <div class="picker__panel">
               <div class="picker__header">
@@ -272,9 +290,21 @@
                     <option value="name-asc">Name: A-Z</option>
                   </select>
                 </div>
-                <button class="picker__close" id="picker-close">&times;</button>
+                <button type="button" class="picker__close" id="picker-close">&times;</button>
               </div>
               <div class="picker__body" id="picker-body"></div>
+            </div>
+          </div>
+
+          <!-- Boost Target Selection Modal -->
+          <div class="boost-target-modal" id="boost-target-modal" hidden style="display:none">
+            <div class="boost-target__backdrop"></div>
+            <div class="boost-target__panel">
+              <div class="boost-target__header">
+                <h3 id="boost-target-title">Select Driver for Boost</h3>
+                <button type="button" class="picker__close" id="boost-target-close">&times;</button>
+              </div>
+              <div class="boost-target__body" id="boost-target-body"></div>
             </div>
           </div>
         </div>
@@ -437,6 +467,79 @@
       </section>
 
     </main>
+
+    <!-- Account Settings Modal (authenticated users) -->
+    <div class="account-modal" id="account-modal" hidden style="display:none">
+      <div class="account-modal__backdrop"></div>
+      <div class="account-modal__panel">
+        <div class="account-modal__header">
+          <h3>Account Settings</h3>
+          <button type="button" class="picker__close" id="account-modal-close">&times;</button>
+        </div>
+        <div class="account-modal__body">
+          <form id="account-form" class="account-form">
+            <div class="auth-field">
+              <label for="account-name">Display Name</label>
+              <input type="text" id="account-name" placeholder="Your display name" autocomplete="name">
+            </div>
+            <div class="auth-field">
+              <label for="account-email-display">Email</label>
+              <input type="email" id="account-email-display" disabled class="account-input--disabled">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--primary">Save Changes</button>
+            </div>
+            <div class="auth-error" id="account-error"></div>
+            <div class="account-success" id="account-success"></div>
+          </form>
+          <hr class="user-menu__divider" style="margin: 1.25rem 0">
+          <h4 class="account-section-title">Change Password</h4>
+          <form id="password-form" class="account-form">
+            <div class="auth-field">
+              <label for="account-new-password">New Password</label>
+              <input type="password" id="account-new-password" placeholder="At least 6 characters" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="auth-field">
+              <label for="account-confirm-password">Confirm Password</label>
+              <input type="password" id="account-confirm-password" placeholder="Repeat new password" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--sm">Update Password</button>
+            </div>
+            <div class="auth-error" id="password-error"></div>
+            <div class="account-success" id="password-success"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guest Profile Modal -->
+    <div class="account-modal" id="guest-profile-modal" hidden style="display:none">
+      <div class="account-modal__backdrop"></div>
+      <div class="account-modal__panel">
+        <div class="account-modal__header">
+          <h3>Guest Profile</h3>
+          <button type="button" class="picker__close" id="guest-profile-close">&times;</button>
+        </div>
+        <div class="account-modal__body">
+          <p class="text-muted" style="margin-bottom:1rem">Your data is stored locally in this browser. Sign in to sync across devices.</p>
+          <form id="guest-profile-form" class="account-form">
+            <div class="auth-field">
+              <label for="guest-name">Display Name</label>
+              <input type="text" id="guest-name" placeholder="How you want to be known" autocomplete="name">
+            </div>
+            <div class="auth-field">
+              <label for="guest-team-name">Team Name</label>
+              <input type="text" id="guest-team-name" placeholder="Name your fantasy team">
+            </div>
+            <div class="account-form__actions">
+              <button type="submit" class="btn btn--primary">Save Profile</button>
+            </div>
+            <div class="account-success" id="guest-profile-success"></div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="js/app.js"></script>
