@@ -5,7 +5,9 @@
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, RACE_CALENDAR, getFlag } from '../config.js';
 import { on, HookEvents, getLog } from '../services/hooks.js';
 import { getTeam } from '../models/team.js';
-import { loadScoringHistory, loadCachedResults } from '../services/storage.js';
+import { loadScoringHistory } from '../services/storage.js';
+
+let _lastSyncTime = null; // track last successful sync for activity footer
 
 export function initDashboard() {
   renderHeroNextRace();
@@ -15,21 +17,29 @@ export function initDashboard() {
   renderConstructorsList();
   renderPointsChart();
   renderHookLog();
+  renderOnboardingBanner();
   setupForceSync();
 
   on(HookEvents.RACE_SCHEDULE_UPDATED, renderHeroNextRace);
-  on(HookEvents.TEAM_UPDATED, renderTeamSummary);
+  on(HookEvents.TEAM_UPDATED, () => {
+    renderTeamSummary();
+    renderHookLog();
+    renderOnboardingBanner();
+  });
   on(HookEvents.RACE_RESULTS_RECEIVED, () => renderStatsRow());
   on(HookEvents.FANTASY_SCORES_CALCULATED, () => renderStatsRow());
   on(HookEvents.DATA_SYNC_START, () => updateSyncIndicator('syncing'));
   on(HookEvents.DATA_SYNC_COMPLETE, (data) => {
+    _lastSyncTime = new Date();
     updateSyncIndicator(data.errors?.length > 0 ? 'error' : 'synced');
     renderPointsChart();
     renderStatsRow();
+    renderHookLog();
   });
   on(HookEvents.DATA_SYNC_ERROR, () => updateSyncIndicator('error'));
   on(HookEvents.TEAM_BUDGET_CHANGED, updateBudgetDisplay);
 
+  // Log team events for activity feed
   for (const event of Object.values(HookEvents)) {
     on(event, () => renderHookLog());
   }
@@ -54,13 +64,20 @@ function renderHeroNextRace() {
   const flag = getFlag(nextRace.flag);
   const sprintHtml = nextRace.sprint ? '<span class="sprint-badge">Sprint Weekend</span>' : '';
 
-  // Count completed races
   const completed = RACE_CALENDAR.filter(r => new Date(r.date) < now).length;
+  const total = RACE_CALENDAR.length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   container.innerHTML = `
     <div class="hero-content">
       <div class="hero-race-info">
-        <div class="hero-round">Round ${nextRace.round} of 24 ${sprintHtml}</div>
+        <div class="hero-round">
+          Round ${nextRace.round} of ${total} ${sprintHtml}
+        </div>
+        <div class="season-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Season progress: ${completed} of ${total} races completed">
+          <div class="season-progress__fill" style="width:${pct}%"></div>
+        </div>
+        <div class="season-progress__label">${completed} of ${total} races complete</div>
         <div class="hero-race-name">${flag} ${nextRace.name}</div>
         <div class="hero-circuit">${nextRace.circuit}</div>
         <div class="hero-date">${dateStr}</div>
@@ -88,7 +105,6 @@ function renderStatsRow() {
   const container = document.getElementById('stats-row');
   const history = loadScoringHistory();
   const totalPoints = Object.values(history).reduce((sum, r) => sum + (r.total || 0), 0);
-  const racesScored = Object.keys(history).length;
   const completed = RACE_CALENDAR.filter(r => new Date(r.date) < new Date()).length;
 
   container.innerHTML = `
@@ -214,6 +230,9 @@ function renderConstructorsList() {
 }
 
 // ===== Points Chart =====
+
+let _chartState = null; // stored for hover interactivity
+
 export function renderPointsChart() {
   const canvas = document.getElementById('points-chart');
   if (!canvas) return;
@@ -235,48 +254,20 @@ export function renderPointsChart() {
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
+  // Toggle empty overlay
+  const emptyOverlay = document.getElementById('chart-empty-overlay');
+  if (emptyOverlay) {
+    emptyOverlay.hidden = rounds.length > 0;
+  }
+
   ctx.clearRect(0, 0, w, h);
 
   if (rounds.length === 0) {
-    // Draw a stylish empty state
-    ctx.fillStyle = '#252a3a';
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid lines
-    ctx.strokeStyle = '#2e3450';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const y = pad.top + (plotH / 4) * i;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, y);
-      ctx.lineTo(w - pad.right, y);
-      ctx.stroke();
-    }
-
-    // Simulated trend line
-    ctx.strokeStyle = 'rgba(225, 6, 0, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    for (let i = 0; i <= 10; i++) {
-      const x = pad.left + (plotW / 10) * i;
-      const y = pad.top + plotH - (plotH * 0.1) - (plotH * 0.7) * (i / 10) + Math.sin(i * 0.8) * 15;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = '#6c7090';
-    ctx.font = '13px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Your points will be tracked here as races complete', w / 2, h / 2 + 30);
+    drawEmptyChart(ctx, w, h, pad, plotW, plotH);
+    _chartState = null;
+    removeChartListeners(canvas);
     return;
   }
-
-  // Background
-  ctx.fillStyle = '#252a3a';
-  ctx.fillRect(0, 0, w, h);
 
   let cumulative = 0;
   const points = rounds.map(r => {
@@ -285,6 +276,16 @@ export function renderPointsChart() {
   });
 
   const maxPts = Math.max(...points, 10);
+
+  drawChartBase(ctx, w, h, pad, points, rounds, maxPts, plotW, plotH);
+
+  _chartState = { ctx, w, h, pad, points, rounds, maxPts, plotW, plotH };
+  setupChartHover(canvas);
+}
+
+function drawChartBase(ctx, w, h, pad, points, rounds, maxPts, plotW, plotH) {
+  ctx.fillStyle = '#252a3a';
+  ctx.fillRect(0, 0, w, h);
 
   // Grid
   ctx.strokeStyle = '#2e3450';
@@ -296,7 +297,7 @@ export function renderPointsChart() {
     ctx.lineTo(w - pad.right, y);
     ctx.stroke();
 
-    ctx.fillStyle = '#6c7090';
+    ctx.fillStyle = '#8b90a8';
     ctx.font = '11px Inter, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(Math.round(maxPts - (maxPts / 4) * i), pad.left - 8, y + 4);
@@ -346,7 +347,7 @@ export function renderPointsChart() {
   });
 
   // Round labels
-  ctx.fillStyle = '#6c7090';
+  ctx.fillStyle = '#8b90a8';
   ctx.font = '10px Inter, sans-serif';
   ctx.textAlign = 'center';
   rounds.forEach((r, i) => {
@@ -355,48 +356,227 @@ export function renderPointsChart() {
   });
 }
 
-// ===== Hook Log =====
+function drawEmptyChart(ctx, w, h, pad, plotW, plotH) {
+  ctx.fillStyle = '#252a3a';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = '#2e3450';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (plotH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = 'rgba(225, 6, 0, 0.2)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  for (let i = 0; i <= 10; i++) {
+    const x = pad.left + (plotW / 10) * i;
+    const y = pad.top + plotH - (plotH * 0.1) - (plotH * 0.7) * (i / 10) + Math.sin(i * 0.8) * 15;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ===== Chart Hover Tooltips (P2.1) =====
+
+function setupChartHover(canvas) {
+  removeChartListeners(canvas);
+
+  canvas._hoverListener = (e) => handleChartHover(e, canvas);
+  canvas._leaveListener = () => {
+    if (!_chartState) return;
+    const { ctx, w, h, pad, points, rounds, maxPts, plotW, plotH } = _chartState;
+    drawChartBase(ctx, w, h, pad, points, rounds, maxPts, plotW, plotH);
+  };
+
+  canvas.addEventListener('mousemove', canvas._hoverListener);
+  canvas.addEventListener('mouseleave', canvas._leaveListener);
+}
+
+function removeChartListeners(canvas) {
+  if (canvas._hoverListener) canvas.removeEventListener('mousemove', canvas._hoverListener);
+  if (canvas._leaveListener) canvas.removeEventListener('mouseleave', canvas._leaveListener);
+}
+
+function handleChartHover(e, canvas) {
+  if (!_chartState) return;
+  const { ctx, w, h, pad, points, rounds, maxPts, plotW, plotH } = _chartState;
+  if (!points.length) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Find nearest data point within 20px
+  let nearest = null;
+  let minDist = Infinity;
+  for (let i = 0; i < points.length; i++) {
+    const x = pad.left + (plotW / (points.length - 1 || 1)) * i;
+    const y = pad.top + plotH - (points[i] / maxPts) * plotH;
+    const dist = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+    if (dist < 20 && dist < minDist) {
+      minDist = dist;
+      nearest = { x, y, round: rounds[i], pts: points[i] };
+    }
+  }
+
+  // Redraw base chart
+  drawChartBase(ctx, w, h, pad, points, rounds, maxPts, plotW, plotH);
+
+  if (!nearest) return;
+
+  // Draw highlighted dot
+  ctx.beginPath();
+  ctx.arc(nearest.x, nearest.y, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#e10600';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Tooltip content
+  const race = RACE_CALENDAR.find(r => r.round === parseInt(nearest.round));
+  const raceName = race?.name || `Round ${nearest.round}`;
+  const line1 = `Round ${nearest.round}: ${raceName}`;
+  const line2 = `${nearest.pts} pts cumulative`;
+
+  ctx.save();
+  ctx.font = 'bold 11px Inter, sans-serif';
+  const l1w = ctx.measureText(line1).width;
+  ctx.font = '10px Inter, sans-serif';
+  const l2w = ctx.measureText(line2).width;
+  const tipW = Math.max(l1w, l2w) + 24;
+  const tipH = 46;
+
+  let tx = nearest.x + 14;
+  if (tx + tipW > w - 8) tx = nearest.x - tipW - 14;
+  let ty = nearest.y - tipH / 2;
+  if (ty < pad.top) ty = pad.top;
+  if (ty + tipH > h - pad.bottom) ty = h - pad.bottom - tipH;
+
+  // Tooltip box
+  ctx.fillStyle = 'rgba(22, 25, 36, 0.95)';
+  ctx.strokeStyle = '#2e3450';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.rect(tx, ty, tipW, tipH);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#eaecf0';
+  ctx.font = 'bold 11px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(line1, tx + 12, ty + 18);
+
+  ctx.fillStyle = '#e10600';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillText(line2, tx + 12, ty + 33);
+  ctx.restore();
+}
+
+// ===== Recent Activity Log (P1.4) =====
+
+const TEAM_EVENT_LABELS = {
+  'team:driver:added': { label: 'Driver added to team', cls: 'activity-log__msg--team' },
+  'team:driver:removed': { label: 'Driver removed from team', cls: '' },
+  'team:constructor:changed': { label: 'Constructor updated', cls: 'activity-log__msg--team' },
+  'team:updated': null, // skip generic event
+  'team:budget:changed': { label: 'Budget recalculated', cls: '' },
+  'team:boost:activated': { label: 'Boost chip activated', cls: 'activity-log__msg--boost' },
+  'team:transfer:made': { label: 'Transfer completed', cls: 'activity-log__msg--team' },
+};
+
 function renderHookLog() {
   const list = document.getElementById('hook-log-list');
   const log = getLog();
 
-  if (log.length === 0) {
-    list.innerHTML = '<li class="hook-log__item"><span class="hook-log__time">--:--</span><span class="hook-log__msg hook-log__msg--info">App initialized, awaiting data sync...</span></li>';
-    return;
+  // Filter to team events only, skip 'team:updated' (too noisy)
+  const teamEvents = log.filter(e => e.event.startsWith('team:') && e.event !== 'team:updated');
+
+  if (teamEvents.length === 0) {
+    list.innerHTML = '<li class="activity-log__empty">No team changes yet this session.</li>';
+  } else {
+    list.innerHTML = teamEvents.slice(0, 10).map(entry => {
+      const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const meta = TEAM_EVENT_LABELS[entry.event];
+      const label = meta?.label || entry.event;
+      const cls = meta?.cls || '';
+      return `
+        <li class="activity-log__item">
+          <span class="activity-log__time">${time}</span>
+          <span class="activity-log__msg ${cls}">${label}</span>
+        </li>
+      `;
+    }).join('');
   }
 
-  list.innerHTML = log.slice(0, 25).map(entry => {
-    const time = new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const isError = entry.event.includes('error');
-    const isSuccess = entry.event.includes('complete') || entry.event.includes('calculated');
-    const msgClass = isError ? ' hook-log__msg--error' : isSuccess ? ' hook-log__msg--success' : ' hook-log__msg--info';
-    const label = formatEventLabel(entry.event);
-    return `<li class="hook-log__item"><span class="hook-log__time">${time}</span><span class="hook-log__msg${msgClass}">${label}</span></li>`;
-  }).join('');
+  // Update sync status footer
+  const syncTimeEl = document.getElementById('last-sync-time');
+  if (syncTimeEl) {
+    if (_lastSyncTime) {
+      syncTimeEl.textContent = `Synced ${_lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      syncTimeEl.textContent = 'Not yet synced';
+    }
+  }
 }
 
-function formatEventLabel(event) {
-  const labels = {
-    'data:sync:start': 'Syncing data from Jolpica API...',
-    'data:sync:complete': 'Data sync complete',
-    'data:sync:error': 'Sync error occurred',
-    'race:schedule:updated': 'Race schedule updated',
-    'race:results:received': 'Race results received',
-    'race:qualifying:received': 'Qualifying data received',
-    'race:sprint:received': 'Sprint results received',
-    'standings:driver:updated': 'Driver standings updated',
-    'standings:constructor:updated': 'Constructor standings updated',
-    'fantasy:scores:calculated': 'Fantasy scores calculated',
-    'fantasy:scores:updated': 'Fantasy scores updated',
-    'team:driver:added': 'Driver added to team',
-    'team:driver:removed': 'Driver removed from team',
-    'team:constructor:changed': 'Constructor changed',
-    'team:updated': 'Team roster updated',
-    'team:budget:changed': 'Budget recalculated',
-    'team:boost:activated': 'Boost chip activated',
-    'team:transfer:made': 'Transfer completed',
-  };
-  return labels[event] || event;
+// ===== Onboarding Banner (P0.4) =====
+
+function renderOnboardingBanner() {
+  // Don't show if already dismissed or team has at least one driver
+  if (localStorage.getItem('f1fantasy_onboarding_dismissed')) return;
+
+  const team = getTeam();
+  const hasAnyDriver = team.drivers.some(d => d !== null);
+  if (hasAnyDriver) return;
+
+  const dashGrid = document.querySelector('.dashboard-grid');
+  if (!dashGrid) return;
+
+  // Don't duplicate
+  if (document.getElementById('onboarding-banner-card')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'onboarding-banner-card';
+  banner.className = 'onboarding-banner';
+  banner.innerHTML = `
+    <div class="onboarding-banner__icon" aria-hidden="true">&#127945;</div>
+    <div class="onboarding-banner__body">
+      <div class="onboarding-banner__title">Welcome to F1 Fantasy!</div>
+      <ul class="onboarding-banner__list">
+        <li>Pick <strong>5 drivers</strong> and <strong>2 constructors</strong> within a $100M budget</li>
+        <li>Earn points based on real race results every weekend</li>
+        <li>Use <strong>boost chips</strong> like DRS and Wildcard to maximise your score</li>
+      </ul>
+      <div class="onboarding-banner__actions">
+        <button class="btn btn--primary" id="onboarding-build-btn">Build Your Team</button>
+        <button class="onboarding-banner__dismiss" id="onboarding-dismiss-btn">Dismiss</button>
+      </div>
+    </div>
+    <button class="onboarding-banner__close" id="onboarding-close-btn" aria-label="Dismiss welcome banner">&times;</button>
+  `;
+
+  dashGrid.insertAdjacentElement('afterbegin', banner);
+
+  function dismiss() {
+    localStorage.setItem('f1fantasy_onboarding_dismissed', '1');
+    banner.remove();
+  }
+
+  document.getElementById('onboarding-build-btn').addEventListener('click', () => {
+    dismiss();
+    document.querySelector('[data-view="my-team"]')?.click();
+  });
+  document.getElementById('onboarding-dismiss-btn').addEventListener('click', dismiss);
+  document.getElementById('onboarding-close-btn').addEventListener('click', dismiss);
 }
 
 function updateSyncIndicator(status) {

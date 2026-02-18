@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- Auth Screen (shown when not logged in) -->
   <div id="auth-screen" class="auth-screen">
@@ -77,14 +78,15 @@
           <span class="logo__fantasy">FANTASY</span>
         </div>
       </div>
-      <nav class="top-bar__nav">
-        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-        <button class="nav-btn" data-view="my-team">My Team</button>
-        <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
-        <button class="nav-btn" data-view="drivers">Drivers</button>
-        <button class="nav-btn" data-view="constructors">Constructors</button>
-        <button class="nav-btn" data-view="standings">Standings</button>
-        <button class="nav-btn" data-view="calendar">Calendar</button>
+      <nav class="top-bar__nav" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="dashboard" data-nav-priority="primary">Dashboard</button>
+        <button class="nav-btn" data-view="my-team" data-nav-priority="primary">My Team</button>
+        <button class="nav-btn" data-view="leaderboard" data-nav-priority="primary">Leaderboard</button>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <button class="nav-btn" data-view="drivers" data-nav-priority="secondary">Drivers</button>
+        <button class="nav-btn" data-view="constructors" data-nav-priority="secondary">Constructors</button>
+        <button class="nav-btn" data-view="standings" data-nav-priority="secondary">Standings</button>
+        <button class="nav-btn" data-view="calendar" data-nav-priority="secondary">Calendar</button>
         <button class="nav-btn nav-btn--admin" data-view="admin" id="nav-admin" style="display:none">Admin</button>
       </nav>
       <div class="top-bar__right">
@@ -121,18 +123,18 @@
     <div class="announcement-banner" id="announcement-banner" hidden>
       <span class="announcement-banner__icon">&#128227;</span>
       <span class="announcement-banner__text" id="announcement-banner-text"></span>
-      <button class="announcement-banner__close" id="announcement-banner-close">&times;</button>
+      <button class="announcement-banner__close" id="announcement-banner-close" aria-label="Close announcement">&times;</button>
     </div>
 
     <!-- Notification Bar -->
     <div class="notification-bar" id="notification-bar" hidden>
       <span class="notification-bar__icon">&#9432;</span>
       <span class="notification-bar__message" id="notification-message"></span>
-      <button class="notification-bar__close" id="notification-close">&times;</button>
+      <button class="notification-bar__close" id="notification-close" aria-label="Close notification">&times;</button>
     </div>
 
     <!-- Main Content Area -->
-    <main class="main-content">
+    <main class="main-content" id="main-content">
 
       <!-- Dashboard View -->
       <section class="view active" id="view-dashboard">
@@ -154,23 +156,27 @@
 
           <div class="card card--hook-log">
             <div class="card__header">
-              <h2>Live Update Log</h2>
-              <button class="btn btn--sm" id="force-sync-btn">Force Sync</button>
+              <h2>Recent Activity</h2>
             </div>
             <div class="card__body">
-              <ul class="hook-log" id="hook-log-list">
-                <li class="hook-log__item">
-                  <span class="hook-log__time">--:--</span>
-                  <span class="hook-log__msg hook-log__msg--info">Initializing...</span>
-                </li>
+              <ul class="activity-log" id="hook-log-list" aria-label="Recent team activity">
+                <li class="activity-log__empty">No activity yet.</li>
               </ul>
+              <div class="sync-status-row">
+                <span class="sync-status-row__time" id="last-sync-time">Never synced</span>
+                <button class="sync-status-row__btn" id="force-sync-btn">Force Sync</button>
+              </div>
             </div>
           </div>
 
           <div class="card card--points-chart">
             <div class="card__header"><h2>Season Points Tracker</h2></div>
             <div class="card__body">
-              <canvas id="points-chart" width="600" height="200"></canvas>
+              <canvas id="points-chart" width="600" height="200" role="img" aria-label="Season points chart"></canvas>
+              <div class="chart-empty-overlay" id="chart-empty-overlay" hidden>
+                <p>Build your team to start earning points this race</p>
+                <button class="btn btn--sm" onclick="document.querySelector('[data-view=my-team]').click()">Build Your Team</button>
+              </div>
             </div>
           </div>
 
@@ -220,41 +226,77 @@
           <div class="boost-section">
             <h3>Boosts &amp; Chips</h3>
             <div class="boost-chips" id="boost-chips">
-              <button class="chip" data-boost="drs" title="Double points for one driver (available each race)">
+              <button class="chip" data-boost="drs">
                 <span class="chip__icon">&#9889;</span>
                 <span class="chip__name">DRS Boost</span>
                 <span class="chip__desc">2x one driver</span>
                 <span class="chip__status">Available each race</span>
+                <button class="chip__info" data-boost-info="drs" aria-label="Learn about DRS Boost">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Doubles the race points for one chosen driver this weekend.</p>
+                  <p class="chip__detail-rule">&#128260; Resets every race — use it every weekend.</p>
+                  <p class="chip__detail-tip">&#128161; Best used on a driver expected to finish in the top 5.</p>
+                </div>
               </button>
-              <button class="chip" data-boost="mega" title="Triple points for one driver (one-time use)">
+              <button class="chip" data-boost="mega">
                 <span class="chip__icon">&#9733;</span>
                 <span class="chip__name">Mega Driver</span>
                 <span class="chip__desc">3x one driver</span>
                 <span class="chip__status">Available</span>
+                <button class="chip__info" data-boost-info="mega" aria-label="Learn about Mega Driver">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Triples the race points for one driver — your most powerful chip.</p>
+                  <p class="chip__detail-rule">&#128683; One-time use for the entire season.</p>
+                  <p class="chip__detail-tip">&#128161; Save for a race where your star driver is the runaway favourite.</p>
+                </div>
               </button>
-              <button class="chip" data-boost="extra-drs" title="Additional double points boost (one-time use)">
+              <button class="chip" data-boost="extra-drs">
                 <span class="chip__icon">&#10024;</span>
                 <span class="chip__name">Extra DRS</span>
                 <span class="chip__desc">2x one driver</span>
                 <span class="chip__status">Available</span>
+                <button class="chip__info" data-boost-info="extra-drs" aria-label="Learn about Extra DRS">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Like DRS Boost, doubles a second driver's points for one race.</p>
+                  <p class="chip__detail-rule">&#128683; One-time use. Stack with DRS Boost for two boosted drivers.</p>
+                  <p class="chip__detail-tip">&#128161; Use on a race weekend with two drivers expected to score big.</p>
+                </div>
               </button>
-              <button class="chip" data-boost="limitless" title="No budget cap for one race (one-time use)">
+              <button class="chip" data-boost="limitless">
                 <span class="chip__icon">&#8734;</span>
                 <span class="chip__name">Limitless</span>
                 <span class="chip__desc">No budget cap</span>
                 <span class="chip__status">Available</span>
+                <button class="chip__info" data-boost-info="limitless" aria-label="Learn about Limitless">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Remove the $100M budget cap for one race — pick any team you want.</p>
+                  <p class="chip__detail-rule">&#128683; One-time use. Team reverts to normal budget rules next race.</p>
+                  <p class="chip__detail-tip">&#128161; Build your ultimate dream team for a high-scoring race weekend.</p>
+                </div>
               </button>
-              <button class="chip" data-boost="wildcard" title="Unlimited free transfers for one race (one-time use)">
+              <button class="chip" data-boost="wildcard">
                 <span class="chip__icon">&#9851;</span>
                 <span class="chip__name">Wildcard</span>
                 <span class="chip__desc">Free transfers</span>
                 <span class="chip__status">Available</span>
+                <button class="chip__info" data-boost-info="wildcard" aria-label="Learn about Wildcard">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Make unlimited free transfers for this race with no point penalties.</p>
+                  <p class="chip__detail-rule">&#128683; One-time use for the entire season.</p>
+                  <p class="chip__detail-tip">&#128161; Use after a major driver/team shake-up when you need to rebuild.</p>
+                </div>
               </button>
-              <button class="chip" data-boost="no-negative" title="No negative points scored this race (one-time use)">
+              <button class="chip" data-boost="no-negative">
                 <span class="chip__icon">&#128737;</span>
                 <span class="chip__name">No Negative</span>
                 <span class="chip__desc">Floor at 0 pts</span>
                 <span class="chip__status">Available</span>
+                <button class="chip__info" data-boost-info="no-negative" aria-label="Learn about No Negative">ℹ</button>
+                <div class="chip__detail" aria-hidden="true">
+                  <p class="chip__detail-desc">Any driver or constructor who scores negative points this race is floored at 0 instead.</p>
+                  <p class="chip__detail-rule">&#128683; One-time use for the entire season.</p>
+                  <p class="chip__detail-tip">&#128161; Use at a chaotic race with high DNF risk to protect your score.</p>
+                </div>
               </button>
             </div>
           </div>
@@ -276,33 +318,39 @@
           </div>
 
           <!-- Picker Modal -->
-          <div class="picker" id="picker" hidden style="display:none">
+          <div class="picker" id="picker" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="picker-title">
             <div class="picker__backdrop"></div>
             <div class="picker__panel">
               <div class="picker__header">
-                <h3 id="picker-title">Select Driver</h3>
+                <div class="picker__header-top">
+                  <h3 id="picker-title">Select Driver</h3>
+                  <div class="picker-budget-bar" id="picker-budget-bar">
+                    <span class="picker-budget-bar__label">Budget:</span>
+                    <span class="picker-budget-bar__value" id="picker-budget-value">$100.0M</span>
+                  </div>
+                  <button type="button" class="picker__close" id="picker-close" aria-label="Close picker">&times;</button>
+                </div>
                 <div class="picker__filters">
-                  <input type="text" class="picker__search" id="picker-search" placeholder="Search...">
-                  <select class="picker__sort" id="picker-sort">
+                  <input type="text" class="picker__search" id="picker-search" placeholder="Search..." aria-label="Search drivers or constructors">
+                  <select class="picker__sort" id="picker-sort" aria-label="Sort order">
                     <option value="price-desc">Price: High to Low</option>
                     <option value="price-asc">Price: Low to High</option>
                     <option value="points-desc">Points: High to Low</option>
                     <option value="name-asc">Name: A-Z</option>
                   </select>
                 </div>
-                <button type="button" class="picker__close" id="picker-close">&times;</button>
               </div>
               <div class="picker__body" id="picker-body"></div>
             </div>
           </div>
 
           <!-- Boost Target Selection Modal -->
-          <div class="boost-target-modal" id="boost-target-modal" hidden style="display:none">
+          <div class="boost-target-modal" id="boost-target-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="boost-target-title">
             <div class="boost-target__backdrop"></div>
             <div class="boost-target__panel">
               <div class="boost-target__header">
                 <h3 id="boost-target-title">Select Driver for Boost</h3>
-                <button type="button" class="picker__close" id="boost-target-close">&times;</button>
+                <button type="button" class="picker__close" id="boost-target-close" aria-label="Close boost selector">&times;</button>
               </div>
               <div class="boost-target__body" id="boost-target-body"></div>
             </div>
@@ -469,12 +517,12 @@
     </main>
 
     <!-- Account Settings Modal (authenticated users) -->
-    <div class="account-modal" id="account-modal" hidden style="display:none">
+    <div class="account-modal" id="account-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
       <div class="account-modal__backdrop"></div>
       <div class="account-modal__panel">
         <div class="account-modal__header">
-          <h3>Account Settings</h3>
-          <button type="button" class="picker__close" id="account-modal-close">&times;</button>
+          <h3 id="account-modal-title">Account Settings</h3>
+          <button type="button" class="picker__close" id="account-modal-close" aria-label="Close account settings">&times;</button>
         </div>
         <div class="account-modal__body">
           <form id="account-form" class="account-form">
@@ -513,13 +561,61 @@
       </div>
     </div>
 
+    <!-- Toast Container (P0.1) -->
+    <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- Mobile Bottom Navigation (P1.3) -->
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+      <button class="bottom-nav-btn active" data-view="dashboard">
+        <span class="bottom-nav-btn__icon" aria-hidden="true">&#127968;</span>
+        <span class="bottom-nav-btn__label">Dashboard</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="my-team">
+        <span class="bottom-nav-btn__icon" aria-hidden="true">&#127941;</span>
+        <span class="bottom-nav-btn__label">My Team</span>
+      </button>
+      <button class="bottom-nav-btn" data-view="leaderboard">
+        <span class="bottom-nav-btn__icon" aria-hidden="true">&#127942;</span>
+        <span class="bottom-nav-btn__label">Standings</span>
+      </button>
+      <button class="bottom-nav-btn" id="bottom-nav-more" aria-label="More navigation options" aria-expanded="false">
+        <span class="bottom-nav-btn__icon" aria-hidden="true">&#8942;</span>
+        <span class="bottom-nav-btn__label">More</span>
+      </button>
+    </nav>
+
+    <!-- More Drawer (P1.3) -->
+    <div class="bottom-nav-drawer-backdrop" id="bottom-nav-backdrop"></div>
+    <div class="bottom-nav-drawer" id="bottom-nav-drawer" aria-label="More navigation">
+      <button class="bottom-nav-drawer-item" data-view="drivers">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128100;</span>
+        Drivers
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="constructors">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128663;</span>
+        Constructors
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="standings">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128200;</span>
+        Standings
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="calendar">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128197;</span>
+        Calendar
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="admin" id="bottom-nav-admin" style="display:none">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9881;</span>
+        Admin
+      </button>
+    </div>
+
     <!-- Guest Profile Modal -->
-    <div class="account-modal" id="guest-profile-modal" hidden style="display:none">
+    <div class="account-modal" id="guest-profile-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="guest-profile-title">
       <div class="account-modal__backdrop"></div>
       <div class="account-modal__panel">
         <div class="account-modal__header">
-          <h3>Guest Profile</h3>
-          <button type="button" class="picker__close" id="guest-profile-close">&times;</button>
+          <h3 id="guest-profile-title">Guest Profile</h3>
+          <button type="button" class="picker__close" id="guest-profile-close" aria-label="Close guest profile">&times;</button>
         </div>
         <div class="account-modal__body">
           <p class="text-muted" style="margin-bottom:1rem">Your data is stored locally in this browser. Sign in to sync across devices.</p>

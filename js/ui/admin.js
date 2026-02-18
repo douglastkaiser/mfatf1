@@ -6,6 +6,7 @@ import {
   postAnnouncement, getAnnouncements, deleteAnnouncement,
   getCurrentUser,
 } from '../services/auth.js';
+import { showToast } from './toast.js';
 
 export function initAdmin() {
   if (!isAdmin()) return;
@@ -77,7 +78,7 @@ async function renderMembers() {
           await updateUserRole(uid, newRole);
           await renderMembers();
         } catch (err) {
-          alert('Failed to update role: ' + err.message);
+          showToast('Failed to update role: ' + err.message, 'error');
           btn.disabled = false;
         }
       });
@@ -93,7 +94,7 @@ async function renderMembers() {
           await removeUser(uid);
           await renderMembers();
         } catch (err) {
-          alert('Failed to remove user: ' + err.message);
+          showToast('Failed to remove user: ' + err.message, 'error');
           btn.disabled = false;
         }
       });
@@ -125,7 +126,7 @@ function setupAnnouncementForm() {
       input.value = '';
       await renderAnnouncements();
     } catch (err) {
-      alert('Failed to post announcement: ' + err.message);
+      showToast('Failed to post announcement: ' + err.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Post';
@@ -171,7 +172,7 @@ async function renderAnnouncements() {
           await deleteAnnouncement(btn.dataset.id);
           await renderAnnouncements();
         } catch (err) {
-          alert('Failed to delete: ' + err.message);
+          showToast('Failed to delete: ' + err.message, 'error');
         }
       });
     });
