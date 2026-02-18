@@ -46,7 +46,17 @@ export async function renderLeaderboard() {
     ranked.sort((a, b) => b.totalPoints - a.totalPoints);
 
     if (ranked.length === 0) {
-      container.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">No league members yet.</td></tr>';
+      container.innerHTML = `
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state__icon">&#127942;</div>
+              <div class="empty-state__title">No league members yet</div>
+              <p class="empty-state__body">Share this app with friends to see the league standings here.</p>
+            </div>
+          </td>
+        </tr>
+      `;
       return;
     }
 
