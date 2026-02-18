@@ -1,5 +1,6 @@
 // Fantasy Team Model
 // Manages the user's team: driver/constructor selection, budget, transfers, boosts.
+// Official F1 Fantasy format: 5 drivers + 2 constructors, $100M budget.
 
 import { DRIVERS, CONSTRUCTORS, BUDGET, SCORING } from '../config.js';
 import { emit, HookEvents } from '../services/hooks.js';
@@ -11,6 +12,14 @@ let transferLog = null;
 
 export function initTeam() {
   teamState = loadTeam();
+  // Migrate old single-constructor format to new 2-constructor format
+  if (teamState && !Array.isArray(teamState.constructors)) {
+    teamState.constructors = teamState.constructor
+      ? [teamState.constructor, null]
+      : [null, null];
+    delete teamState.constructor;
+    saveTeam(teamState);
+  }
   boostState = loadBoosts();
   transferLog = loadTransferLog();
   return teamState;
@@ -18,7 +27,7 @@ export function initTeam() {
 
 export function getTeam() {
   if (!teamState) initTeam();
-  return { ...teamState };
+  return { ...teamState, constructors: [...teamState.constructors] };
 }
 
 export function getBoosts() {
@@ -60,9 +69,12 @@ export function addDriver(driverId, slot) {
 
   // Check if this is a transfer (replacing a filled slot after lockdown)
   if (currentDriverId && teamState.locked) {
-    const freeLeft = teamState.freeTransfers - teamState.transfersMade;
-    if (freeLeft <= 0) {
-      // Extra transfer penalty will be applied
+    const isWildcard = boostState?.wildcard?.active;
+    if (!isWildcard) {
+      const freeLeft = teamState.freeTransfers - teamState.transfersMade;
+      if (freeLeft <= 0) {
+        // Extra transfer penalty will be applied
+      }
     }
     transferLog.push({
       type: 'driver',
@@ -113,18 +125,28 @@ export function removeDriver(slot) {
 }
 
 /**
- * Set the constructor.
+ * Set a constructor in a slot (0 or 1).
+ * @param {string} constructorId
+ * @param {number} slot - 0 or 1
  */
-export function setConstructor(constructorId) {
+export function setConstructor(constructorId, slot = 0) {
   if (!teamState) initTeam();
 
   const constructor = CONSTRUCTORS.find(c => c.id === constructorId);
   if (!constructor) return { success: false, error: 'Constructor not found' };
 
+  if (slot < 0 || slot > 1) return { success: false, error: 'Invalid constructor slot' };
+
+  // Check if constructor already on team (in either slot)
+  if (teamState.constructors.includes(constructorId)) {
+    return { success: false, error: 'Constructor already on team' };
+  }
+
   // Budget adjustment
   let budgetChange = -constructor.price;
-  if (teamState.constructor) {
-    const current = CONSTRUCTORS.find(c => c.id === teamState.constructor);
+  const currentId = teamState.constructors[slot];
+  if (currentId) {
+    const current = CONSTRUCTORS.find(c => c.id === currentId);
     budgetChange += current ? current.price : 0;
   }
 
@@ -133,13 +155,32 @@ export function setConstructor(constructorId) {
     return { success: false, error: 'Insufficient budget' };
   }
 
-  teamState.constructor = constructorId;
+  // Track transfer if replacing after lockdown
+  if (currentId && teamState.locked) {
+    const isWildcard = boostState?.wildcard?.active;
+    if (!isWildcard) {
+      const freeLeft = teamState.freeTransfers - teamState.transfersMade;
+      if (freeLeft <= 0) {
+        // Extra transfer penalty will be applied
+      }
+    }
+    transferLog.push({
+      type: 'constructor',
+      out: currentId,
+      in: constructorId,
+      timestamp: new Date().toISOString(),
+    });
+    saveTransferLog(transferLog);
+    emit(HookEvents.TEAM_TRANSFER_MADE, { out: currentId, in: constructorId });
+  }
+
+  teamState.constructors[slot] = constructorId;
   if (!isLimitless) {
     teamState.budget = Math.round((teamState.budget + budgetChange) * 10) / 10;
   }
 
   saveTeam(teamState);
-  emit(HookEvents.TEAM_CONSTRUCTOR_CHANGED, { constructorId });
+  emit(HookEvents.TEAM_CONSTRUCTOR_CHANGED, { constructorId, slot });
   emit(HookEvents.TEAM_UPDATED, teamState);
   emit(HookEvents.TEAM_BUDGET_CHANGED, teamState.budget);
 
@@ -147,20 +188,24 @@ export function setConstructor(constructorId) {
 }
 
 /**
- * Remove the constructor.
+ * Remove a constructor from a slot.
+ * @param {number} slot - 0 or 1
  */
-export function removeConstructor() {
+export function removeConstructor(slot = 0) {
   if (!teamState) initTeam();
-  if (!teamState.constructor) return { success: false, error: 'No constructor selected' };
+  if (slot < 0 || slot > 1) return { success: false, error: 'Invalid constructor slot' };
 
-  const current = CONSTRUCTORS.find(c => c.id === teamState.constructor);
+  const constructorId = teamState.constructors[slot];
+  if (!constructorId) return { success: false, error: 'Slot is empty' };
+
+  const current = CONSTRUCTORS.find(c => c.id === constructorId);
   if (current) {
     teamState.budget = Math.round((teamState.budget + current.price) * 10) / 10;
   }
-  teamState.constructor = null;
+  teamState.constructors[slot] = null;
   saveTeam(teamState);
 
-  emit(HookEvents.TEAM_CONSTRUCTOR_CHANGED, { constructorId: null });
+  emit(HookEvents.TEAM_CONSTRUCTOR_CHANGED, { constructorId: null, slot });
   emit(HookEvents.TEAM_UPDATED, teamState);
   emit(HookEvents.TEAM_BUDGET_CHANGED, teamState.budget);
 
@@ -169,7 +214,7 @@ export function removeConstructor() {
 
 /**
  * Activate a boost for a race.
- * @param {string} boostType - 'drs', 'mega', 'extra-drs', 'limitless'
+ * @param {string} boostType - 'drs', 'mega', 'extra-drs', 'limitless', 'wildcard', 'no-negative'
  * @param {string} [targetDriverId] - For DRS/Mega/ExtraDRS, which driver to boost
  */
 export function activateBoost(boostType, targetDriverId = null) {
@@ -182,13 +227,21 @@ export function activateBoost(boostType, targetDriverId = null) {
     return { success: false, error: 'Boost already used this season' };
   }
 
-  if (boostType === 'limitless') {
-    boost.active = true;
-  } else {
+  // Boosts that require a driver target
+  const needsTarget = ['drs', 'mega', 'extra-drs'];
+  if (needsTarget.includes(boostType)) {
+    if (!targetDriverId) {
+      return { success: false, error: 'Select a driver for this boost' };
+    }
+    // Validate driver is on the team
+    if (!teamState) initTeam();
+    if (!teamState.drivers.includes(targetDriverId)) {
+      return { success: false, error: 'Driver is not on your team' };
+    }
     boost.target = targetDriverId;
-    boost.active = true;
   }
 
+  boost.active = true;
   saveBoosts(boostState);
   emit(HookEvents.TEAM_BOOST_ACTIVATED, { boostType, targetDriverId });
 
@@ -234,9 +287,10 @@ export function getBudget() {
 }
 
 /**
- * Check if team is complete (5 drivers + 1 constructor).
+ * Check if team is complete (5 drivers + 2 constructors).
  */
 export function isTeamComplete() {
   if (!teamState) initTeam();
-  return teamState.drivers.every(d => d !== null) && teamState.constructor !== null;
+  return teamState.drivers.every(d => d !== null) &&
+    teamState.constructors.every(c => c !== null);
 }

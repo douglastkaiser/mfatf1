@@ -152,8 +152,10 @@ function renderTeamSummary() {
     `;
   }
 
-  if (team.constructor) {
-    const c = CONSTRUCTORS.find(c => c.id === team.constructor);
+  const constructors = team.constructors || (team.constructor ? [team.constructor] : []);
+  for (const cId of constructors) {
+    if (!cId) continue;
+    const c = CONSTRUCTORS.find(c => c.id === cId);
     if (c) {
       html += `
         <div class="performer" style="border-top:1px solid var(--border-color);padding-top:0.5rem;margin-top:0.25rem">

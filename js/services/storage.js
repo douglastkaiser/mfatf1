@@ -14,6 +14,7 @@ const KEYS = {
   LAST_SYNC: `${STORAGE_PREFIX}last_sync`,
   CACHED_RESULTS: `${STORAGE_PREFIX}cached_results`,
   PREFERENCES: `${STORAGE_PREFIX}preferences`,
+  GUEST_PROFILE: `${STORAGE_PREFIX}guest_profile`,
 };
 
 // ===== Cloud Sync (debounced) =====
@@ -56,9 +57,20 @@ function write(key, value) {
 // ===== Team =====
 
 export function loadTeam() {
-  return read(KEYS.TEAM) || {
+  const stored = read(KEYS.TEAM);
+  if (stored) {
+    // Migrate old single-constructor format
+    if (!Array.isArray(stored.constructors)) {
+      stored.constructors = stored.constructor
+        ? [stored.constructor, null]
+        : [null, null];
+      delete stored.constructor;
+    }
+    return stored;
+  }
+  return {
     drivers: [null, null, null, null, null],
-    constructor: null,
+    constructors: [null, null],
     budget: 100.0,
     freeTransfers: 2,
     transfersMade: 0,
@@ -93,12 +105,21 @@ export function appendRaceScore(round, scoreData) {
 // ===== Boosts =====
 
 export function loadBoosts() {
-  return read(KEYS.BOOSTS) || {
-    drs: { used: false, target: null },
-    mega: { used: false, target: null },
-    'extra-drs': { used: false, target: null },
-    limitless: { used: false },
+  const stored = read(KEYS.BOOSTS);
+  const defaults = {
+    drs: { used: false, target: null, active: false },
+    mega: { used: false, target: null, active: false },
+    'extra-drs': { used: false, target: null, active: false },
+    limitless: { used: false, active: false },
+    wildcard: { used: false, active: false },
+    'no-negative': { used: false, active: false },
   };
+  if (!stored) return defaults;
+  // Merge in any new boost types that don't exist yet
+  for (const key of Object.keys(defaults)) {
+    if (!stored[key]) stored[key] = defaults[key];
+  }
+  return stored;
 }
 
 export function saveBoosts(boosts) {
@@ -159,6 +180,20 @@ export function savePreferences(prefs) {
 
 export function clearAllData() {
   Object.values(KEYS).forEach(k => localStorage.removeItem(k));
+}
+
+// ===== Guest Profile =====
+
+export function loadGuestProfile() {
+  return read(KEYS.GUEST_PROFILE) || {
+    displayName: 'Guest',
+    teamName: '',
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function saveGuestProfile(profile) {
+  write(KEYS.GUEST_PROFILE, profile);
 }
 
 // ===== Cloud Hydration =====
