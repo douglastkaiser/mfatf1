@@ -2,13 +2,14 @@
 // Shows current matchup, personal W/L/D record, full schedule, and H2H league table.
 // Mirrors the leaderboard.js pattern: getAllUsers() → usersMap → render.
 
-import { getAllUsers, getCurrentUser, loadH2HSchedule } from '../services/auth.js';
+import { getAllUsers, getCurrentUser, loadH2HSchedule, saveH2HSchedule } from '../services/auth.js';
 import {
   computeH2HStandings,
   computeMatchupResult,
   getMatchupForUser,
   getCurrentRound,
   TOTAL_ROUNDS,
+  generateRoundRobinSchedule,
 } from '../services/h2h.js';
 import { RACE_CALENDAR } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
@@ -46,12 +47,17 @@ export async function renderH2H() {
     // Build uid → userDoc map (same pattern as leaderboard.js)
     const usersMap = Object.fromEntries(users.map(u => [u.id, u]));
 
-    // Load the H2H schedule from Firestore
-    const h2hDoc = await loadH2HSchedule();
+    // Load the H2H schedule from Firestore; auto-generate if none exists yet
+    let h2hDoc = await loadH2HSchedule();
     if (!h2hDoc || !h2hDoc.schedule?.length) {
-      renderNoSchedule();
-      setLoading(false);
-      return;
+      if (users.length < 2) {
+        renderNoSchedule();
+        setLoading(false);
+        return;
+      }
+      const generated = generateRoundRobinSchedule(users.map(u => u.id));
+      await saveH2HSchedule(generated);
+      h2hDoc = { schedule: generated };
     }
 
     const schedule = h2hDoc.schedule;
