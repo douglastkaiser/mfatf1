@@ -4,13 +4,16 @@
 import {
   getAllUsers, updateUserRole, removeUser, isAdmin,
   postAnnouncement, getAnnouncements, deleteAnnouncement,
-  getCurrentUser,
+  getCurrentUser, saveH2HSchedule,
 } from '../services/auth.js';
+import { generateRoundRobinSchedule } from '../services/h2h.js';
+import { emit, HookEvents } from '../services/hooks.js';
 import { showToast } from './toast.js';
 
 export function initAdmin() {
   if (!isAdmin()) return;
   setupAnnouncementForm();
+  initH2HAdminCard();
   renderAdminPanel();
 }
 
@@ -185,4 +188,44 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ===== H2H Schedule Generation =====
+
+function initH2HAdminCard() {
+  const btn = document.getElementById('admin-h2h-generate-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    if (!confirm('Generate a new H2H schedule? This will overwrite any existing schedule.')) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    try {
+      const users = await getAllUsers();
+      const playerUids = users.map(u => u.id);
+
+      if (playerUids.length < 2) {
+        showToast('Need at least 2 league members to generate a schedule.', 'error');
+        return;
+      }
+
+      const schedule = generateRoundRobinSchedule(playerUids);
+      await saveH2HSchedule(schedule);
+
+      const matchupsPerRound = Math.floor(playerUids.length / 2);
+      showToast(
+        `H2H schedule generated! ${playerUids.length} players, ${matchupsPerRound} matchup${matchupsPerRound !== 1 ? 's' : ''} per round across 24 rounds.`,
+        'success'
+      );
+      emit(HookEvents.H2H_SCHEDULE_UPDATED, { playerCount: playerUids.length });
+    } catch (err) {
+      console.error('[Admin] H2H generation failed:', err);
+      showToast('Failed to generate H2H schedule: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate H2H Schedule';
+    }
+  });
 }
