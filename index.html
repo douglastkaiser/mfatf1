@@ -82,6 +82,7 @@
         <button class="nav-btn active" data-view="dashboard" data-nav-priority="primary">Dashboard</button>
         <button class="nav-btn" data-view="my-team" data-nav-priority="primary">My Team</button>
         <button class="nav-btn" data-view="leaderboard" data-nav-priority="primary">Leaderboard</button>
+        <button class="nav-btn" data-view="h2h" data-nav-priority="primary">H2H</button>
         <span class="nav-divider" aria-hidden="true"></span>
         <button class="nav-btn" data-view="drivers" data-nav-priority="secondary">Drivers</button>
         <button class="nav-btn" data-view="constructors" data-nav-priority="secondary">Constructors</button>
@@ -478,6 +479,89 @@
         </div>
       </section>
 
+      <!-- H2H View -->
+      <section class="view" id="view-h2h">
+        <div class="h2h-grid">
+
+          <!-- Top row: current matchup + personal record -->
+          <div class="h2h-top-row">
+            <div class="card">
+              <div class="card__header">
+                <h2>Current Matchup</h2>
+                <button class="btn btn--sm" id="h2h-refresh">Refresh</button>
+              </div>
+              <div class="card__body">
+                <div id="h2h-loading" hidden style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</div>
+                <div id="h2h-current-matchup">
+                  <p class="text-muted" style="text-align:center;padding:2rem">Loading matchup...</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card__header">
+                <h2>My Record</h2>
+                <span class="card__badge">Season</span>
+              </div>
+              <div class="card__body">
+                <div id="h2h-record">
+                  <p class="text-muted" style="text-align:center;padding:1rem">Loading...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- H2H League Table -->
+          <div class="card">
+            <div class="card__header">
+              <h2>H2H League Table</h2>
+            </div>
+            <div class="card__body" style="padding:0">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Player</th>
+                    <th>W</th>
+                    <th>D</th>
+                    <th>L</th>
+                    <th>Played</th>
+                    <th>Pts For</th>
+                  </tr>
+                </thead>
+                <tbody id="h2h-table-body">
+                  <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- My Full Schedule -->
+          <div class="card">
+            <div class="card__header">
+              <h2>My Full Schedule</h2>
+            </div>
+            <div class="card__body" style="padding:0">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Rnd</th>
+                    <th>Race</th>
+                    <th>Opponent</th>
+                    <th>Score</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody id="h2h-schedule-body">
+                  <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted)">Loading schedule...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- Admin View -->
       <section class="view" id="view-admin">
         <div class="admin-grid">
@@ -509,6 +593,21 @@
                 <button type="submit" class="btn btn--primary">Post</button>
               </form>
               <div id="admin-announcements-list" style="margin-top:1rem"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__header">
+              <h2>Head-to-Head Season</h2>
+              <span class="card__badge">Commissioner</span>
+            </div>
+            <div class="card__body">
+              <p class="text-muted" style="margin-bottom:1rem;font-size:0.85rem">
+                The H2H schedule is generated automatically the first time anyone opens the H2H tab.
+                Use this button to regenerate it — for example, if a new player has joined mid-season.
+                Warning: regenerating will reset all W/L/D records.
+              </p>
+              <button class="btn btn--primary" id="admin-h2h-generate-btn">Regenerate H2H Schedule</button>
             </div>
           </div>
         </div>
@@ -602,6 +701,10 @@
       <button class="bottom-nav-drawer-item" data-view="calendar">
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128197;</span>
         Calendar
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="h2h">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9876;</span>
+        H2H
       </button>
       <button class="bottom-nav-drawer-item" data-view="admin" id="bottom-nav-admin" style="display:none">
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9881;</span>

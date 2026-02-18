@@ -36,6 +36,9 @@ export const HookEvents = {
   TEAM_BOOST_ACTIVATED: 'team:boost:activated',
   TEAM_TRANSFER_MADE: 'team:transfer:made',
 
+  // H2H season
+  H2H_SCHEDULE_UPDATED: 'h2h:schedule:updated',
+
   // Price changes
   PRICES_UPDATED: 'prices:updated',
 

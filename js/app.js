@@ -18,6 +18,7 @@ import {
 } from './services/auth.js';
 import { initAuthUI } from './ui/auth.js';
 import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
+import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
 
 // ===== DOM References =====
@@ -42,6 +43,7 @@ function switchView(viewName) {
 
   if (viewName === 'dashboard') requestAnimationFrame(() => renderPointsChart());
   if (viewName === 'leaderboard') renderLeaderboard();
+  if (viewName === 'h2h') renderH2H();
 }
 
 function initNavigation() {
@@ -466,6 +468,7 @@ async function showApp(user) {
     initTeamUI();
     initViews();
     initLeaderboard();
+    initH2H();
 
     if (isAdmin()) {
       initAdmin();
