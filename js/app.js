@@ -21,6 +21,7 @@ import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
 import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
 import { initNews, renderNews } from './ui/news.js';
+import { initChat, destroyChat } from './ui/chat.js';
 
 // ===== DOM References =====
 
@@ -46,6 +47,7 @@ function switchView(viewName) {
   if (viewName === 'leaderboard') renderLeaderboard();
   if (viewName === 'h2h') renderH2H();
   if (viewName === 'news') renderNews();
+  if (viewName === 'chat') initChat();
 }
 
 function initNavigation() {
@@ -116,6 +118,11 @@ function initEscapeHandler() {
     const guestModal = document.getElementById('guest-profile-modal');
     if (guestModal && !guestModal.hasAttribute('hidden')) {
       hideModal(guestModal);
+      return;
+    }
+    const chatNewModal = document.getElementById('chat-new-modal');
+    if (chatNewModal && !chatNewModal.hasAttribute('hidden')) {
+      hideModal(chatNewModal);
     }
   });
 }
@@ -245,6 +252,7 @@ function initUserMenu() {
 
   logoutBtn.addEventListener('click', async () => {
     stopPolling();
+    destroyChat();
     clearAllData();
     await logout();
   });
@@ -263,6 +271,12 @@ function updateUserUI(profile) {
   avatarEl.textContent = name.charAt(0).toUpperCase();
   dropdownName.textContent = name;
   dropdownEmail.textContent = profile?.email || '';
+
+  // Show chat nav for authenticated users
+  const chatNav = document.getElementById('nav-chat');
+  const bottomChatNav = document.getElementById('bottom-nav-chat');
+  if (chatNav) chatNav.style.display = '';
+  if (bottomChatNav) bottomChatNav.style.display = '';
 
   if (profile?.role === 'admin') {
     dropdownRole.textContent = 'Commissioner';
