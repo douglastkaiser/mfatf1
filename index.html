@@ -88,6 +88,7 @@
         <button class="nav-btn" data-view="constructors" data-nav-priority="secondary">Constructors</button>
         <button class="nav-btn" data-view="standings" data-nav-priority="secondary">Standings</button>
         <button class="nav-btn" data-view="calendar" data-nav-priority="secondary">Calendar</button>
+        <button class="nav-btn" data-view="news" data-nav-priority="secondary">News</button>
         <button class="nav-btn nav-btn--admin" data-view="admin" id="nav-admin" style="display:none">Admin</button>
       </nav>
       <div class="top-bar__right">
@@ -613,6 +614,32 @@
         </div>
       </section>
 
+      <!-- News View -->
+      <section class="view" id="view-news">
+        <div class="news-view">
+          <div class="news-view__header">
+            <div class="news-view__title-row">
+              <h2 class="news-view__title">F1 News</h2>
+              <div class="news-view__actions">
+                <span class="news-view__count" id="news-count"></span>
+                <button class="btn btn--sm" id="news-refresh-btn" aria-label="Refresh news feed">Refresh</button>
+              </div>
+            </div>
+            <p class="news-view__subtitle">Live headlines from the world's top F1 sources</p>
+            <div class="news-filters" role="tablist" aria-label="Filter by source">
+              <button class="news-filter-btn active" data-source="all" role="tab" aria-selected="true">All Sources</button>
+              <button class="news-filter-btn" data-source="f1official" role="tab" aria-selected="false" style="--source-color:#e10600">F1 Official</button>
+              <button class="news-filter-btn" data-source="autosport" role="tab" aria-selected="false" style="--source-color:#009c3b">Autosport</button>
+              <button class="news-filter-btn" data-source="motorsport" role="tab" aria-selected="false" style="--source-color:#ff6b00">Motorsport.com</button>
+              <button class="news-filter-btn" data-source="therace" role="tab" aria-selected="false" style="--source-color:#3391ff">The Race</button>
+              <button class="news-filter-btn" data-source="racefans" role="tab" aria-selected="false" style="--source-color:#9b59b6">RaceFans</button>
+            </div>
+          </div>
+          <p class="news-last-updated" id="news-last-updated"></p>
+          <div class="news-feed" id="news-feed" aria-live="polite" aria-label="F1 news articles"></div>
+        </div>
+      </section>
+
     </main>
 
     <!-- Account Settings Modal (authenticated users) -->
@@ -701,6 +728,10 @@
       <button class="bottom-nav-drawer-item" data-view="calendar">
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128197;</span>
         Calendar
+      </button>
+      <button class="bottom-nav-drawer-item" data-view="news">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128240;</span>
+        News
       </button>
       <button class="bottom-nav-drawer-item" data-view="h2h">
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9876;</span>
