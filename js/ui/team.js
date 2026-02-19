@@ -30,6 +30,17 @@ export function initTeamUI() {
     updateTeamMeta();
     renderBoosts();
   });
+
+  // Re-render scores when race simulation or data sync writes new scoring history
+  on(HookEvents.DATA_SYNC_COMPLETE, () => {
+    renderSlots();
+    updateTeamMeta();
+  });
+
+  on(HookEvents.FANTASY_SCORES_CALCULATED, () => {
+    renderSlots();
+    updateTeamMeta();
+  });
 }
 
 function updateTeamMeta() {
