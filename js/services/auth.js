@@ -291,3 +291,22 @@ export async function changeUserPassword(newPassword) {
 
   await updatePassword(user, newPassword);
 }
+
+// ===== H2H Schedule =====
+
+export async function saveH2HSchedule(scheduleArray) {
+  if (!db) throw new Error('Firestore not initialized');
+  await setDoc(doc(db, 'h2h', '2026'), {
+    season: '2026',
+    generatedAt: serverTimestamp(),
+    generatedBy: getCurrentUser()?.uid || 'unknown',
+    schedule: scheduleArray,
+  });
+}
+
+export async function loadH2HSchedule() {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'h2h', '2026'));
+  if (!snap.exists()) return null;
+  return snap.data();
+}

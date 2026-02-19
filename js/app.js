@@ -18,7 +18,9 @@ import {
 } from './services/auth.js';
 import { initAuthUI } from './ui/auth.js';
 import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
+import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
+import { initNews, renderNews } from './ui/news.js';
 
 // ===== DOM References =====
 
@@ -27,26 +29,94 @@ const appEl = document.getElementById('app');
 
 // ===== Navigation =====
 
-function initNavigation() {
+function switchView(viewName) {
   const navBtns = document.querySelectorAll('.nav-btn[data-view]');
+  const bottomBtns = document.querySelectorAll('.bottom-nav-btn[data-view]');
+  const drawerBtns = document.querySelectorAll('.bottom-nav-drawer-item[data-view]');
   const views = document.querySelectorAll('.view');
 
-  navBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const viewId = `view-${btn.dataset.view}`;
+  const viewId = `view-${viewName}`;
 
-      navBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+  navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
+  bottomBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
+  drawerBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
+  views.forEach(v => v.classList.toggle('active', v.id === viewId));
 
-      views.forEach(v => v.classList.toggle('active', v.id === viewId));
+  if (viewName === 'dashboard') requestAnimationFrame(() => renderPointsChart());
+  if (viewName === 'leaderboard') renderLeaderboard();
+  if (viewName === 'h2h') renderH2H();
+  if (viewName === 'news') renderNews();
+}
 
-      if (btn.dataset.view === 'dashboard') {
-        requestAnimationFrame(() => renderPointsChart());
-      }
-      if (btn.dataset.view === 'leaderboard') {
-        renderLeaderboard();
-      }
+function initNavigation() {
+  // Top nav buttons
+  document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // Bottom nav primary buttons
+  document.querySelectorAll('.bottom-nav-btn[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // "More" button opens the drawer
+  const moreBtn = document.getElementById('bottom-nav-more');
+  const drawer = document.getElementById('bottom-nav-drawer');
+  const backdrop = document.getElementById('bottom-nav-backdrop');
+
+  if (moreBtn && drawer && backdrop) {
+    function openDrawer() {
+      drawer.classList.add('open');
+      backdrop.classList.add('open');
+      moreBtn.setAttribute('aria-expanded', 'true');
+    }
+    function closeDrawer() {
+      drawer.classList.remove('open');
+      backdrop.classList.remove('open');
+      moreBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    moreBtn.addEventListener('click', () => {
+      drawer.classList.contains('open') ? closeDrawer() : openDrawer();
     });
+    backdrop.addEventListener('click', closeDrawer);
+
+    // Drawer items navigate and close the drawer
+    document.querySelectorAll('.bottom-nav-drawer-item[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        switchView(btn.dataset.view);
+        closeDrawer();
+      });
+    });
+  }
+}
+
+// ===== Escape Key Handler (A11y) =====
+
+function initEscapeHandler() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+
+    // Close modals in reverse priority order
+    const picker = document.getElementById('picker');
+    if (picker && !picker.hasAttribute('hidden')) {
+      import('./ui/team.js').then(m => m.closePicker?.());
+      return;
+    }
+    const boostModal = document.getElementById('boost-target-modal');
+    if (boostModal && !boostModal.hasAttribute('hidden')) {
+      import('./ui/team.js').then(m => m.closeBoostTargetModal?.());
+      return;
+    }
+    const accountModal = document.getElementById('account-modal');
+    if (accountModal && !accountModal.hasAttribute('hidden')) {
+      hideModal(accountModal);
+      return;
+    }
+    const guestModal = document.getElementById('guest-profile-modal');
+    if (guestModal && !guestModal.hasAttribute('hidden')) {
+      hideModal(guestModal);
+    }
   });
 }
 
@@ -392,6 +462,7 @@ async function showApp(user) {
     // First boot: initialize everything
     initTeam();
     initNavigation();
+    initEscapeHandler();
     initNotifications();
     initUserMenu();
     initAccountSettings();
@@ -399,9 +470,14 @@ async function showApp(user) {
     initTeamUI();
     initViews();
     initLeaderboard();
+    initH2H();
+    initNews();
 
     if (isAdmin()) {
       initAdmin();
+      // Show admin in bottom nav drawer
+      const bottomAdmin = document.getElementById('bottom-nav-admin');
+      if (bottomAdmin) bottomAdmin.style.display = '';
     }
 
     startPolling();
@@ -429,10 +505,12 @@ export function enterGuestMode() {
   if (!appBooted) {
     initTeam();
     initNavigation();
+    initEscapeHandler();
     initNotifications();
     initDashboard();
     initTeamUI();
     initViews();
+    initNews();
     initGuestProfile();
     startPolling();
     appBooted = true;
@@ -475,10 +553,12 @@ function boot() {
 
     initTeam();
     initNavigation();
+    initEscapeHandler();
     initNotifications();
     initDashboard();
     initTeamUI();
     initViews();
+    initNews();
     startPolling();
     appBooted = true;
     return;
