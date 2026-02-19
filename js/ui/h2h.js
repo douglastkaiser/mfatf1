@@ -3,6 +3,7 @@
 // Mirrors the leaderboard.js pattern: getAllUsers() → usersMap → render.
 
 import { getAllUsers, getCurrentUser, loadH2HSchedule, saveH2HSchedule } from '../services/auth.js';
+import { loadScoringHistory } from '../services/storage.js';
 import {
   computeH2HStandings,
   computeMatchupResult,
@@ -46,6 +47,18 @@ export async function renderH2H() {
 
     // Build uid → userDoc map (same pattern as leaderboard.js)
     const usersMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+    // Merge current user's localStorage scoring history (may be newer than Firestore)
+    const localHistory = loadScoringHistory();
+    if (currentUid && usersMap[currentUid] && Object.keys(localHistory).length > 0) {
+      const merged = { ...(usersMap[currentUid].scoringHistory || {}) };
+      for (const [round, entry] of Object.entries(localHistory)) {
+        if (!merged[round] || entry.total !== undefined) {
+          merged[round] = entry;
+        }
+      }
+      usersMap[currentUid] = { ...usersMap[currentUid], scoringHistory: merged };
+    }
 
     // Load the H2H schedule from Firestore; auto-generate if none exists yet
     let h2hDoc = await loadH2HSchedule();
@@ -104,7 +117,7 @@ function renderCurrentMatchup(matchup, currentUid, usersMap, currentRound) {
       <div class="h2h-matchup-card h2h-matchup-card--bye">
         <div class="h2h-matchup-card__label">Round ${matchup.round} &mdash; ${raceName}</div>
         <p style="text-align:center;color:var(--accent-blue);font-weight:700;font-size:1.1rem;margin:1rem 0">Bye Week</p>
-        <p class="text-muted" style="text-align:center;font-size:0.82rem">You have a bye this round &mdash; automatic win!</p>
+        <p class="text-muted" style="text-align:center;font-size:0.82rem">You have a bye this round &mdash; no matchup.</p>
       </div>
     `;
     return;
@@ -169,7 +182,6 @@ function renderPersonalRecord(currentUid, schedule, usersMap, currentRound) {
     if (result === 'pending') continue;
 
     if (result === 'bye') {
-      wins++;
       byes++;
       continue;
     }
