@@ -2,6 +2,7 @@
 // Shows all league members ranked by fantasy points.
 
 import { getAllUsers, getCurrentUser } from '../services/auth.js';
+import { loadScoringHistory } from '../services/storage.js';
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS } from '../config.js';
 
 export function initLeaderboard() {
@@ -21,6 +22,21 @@ export async function renderLeaderboard() {
   try {
     const users = await getAllUsers();
     const currentUid = getCurrentUser()?.uid;
+
+    // Merge current user's localStorage scoring history (may be newer than Firestore)
+    const localHistory = loadScoringHistory();
+    if (currentUid && Object.keys(localHistory).length > 0) {
+      const idx = users.findIndex(u => u.id === currentUid);
+      if (idx !== -1) {
+        const merged = { ...(users[idx].scoringHistory || {}) };
+        for (const [round, entry] of Object.entries(localHistory)) {
+          if (!merged[round] || entry.total !== undefined) {
+            merged[round] = entry;
+          }
+        }
+        users[idx] = { ...users[idx], scoringHistory: merged };
+      }
+    }
 
     // Calculate total points for each user
     const ranked = users.map(u => {

@@ -9,7 +9,9 @@ import {
 
 import { DRIVERS, CONSTRUCTORS, RACE_CALENDAR, BUDGET } from '../config.js';
 import { processRaceWeekend, calculateTeamScore } from '../scoring/engine.js';
-import { getAllUsers, getDb } from './auth.js';
+import { getAllUsers, getDb, getCurrentUser } from './auth.js';
+import { saveCachedResults, loadCachedResults, loadTestResults, saveTestResults, clearTestResults } from './storage.js';
+import { emit, HookEvents } from './hooks.js';
 
 // ===== Constants =====
 
@@ -378,9 +380,59 @@ export async function cleanupTestMode() {
   const allUsers = await getAllUsers();
   const testUsers = allUsers.filter(u => u.isTestUser === true);
 
+  // 1. Delete test users from Firestore
   for (const user of testUsers) {
     await deleteDoc(doc(db, 'users', user.id));
   }
+
+  // 2. Remove simulated rounds from real users' Firestore scoring history
+  const realUsers = allUsers.filter(u => !u.isTestUser);
+  for (const user of realUsers) {
+    const history = user.scoringHistory || {};
+    const cleaned = {};
+    let hadSimulated = false;
+    for (const [round, entry] of Object.entries(history)) {
+      if (entry.simulated) {
+        hadSimulated = true;
+      } else {
+        cleaned[round] = entry;
+      }
+    }
+    if (hadSimulated) {
+      await updateDoc(doc(db, 'users', user.id), { scoringHistory: cleaned });
+    }
+  }
+
+  // 3. Clear test results from localStorage
+  clearTestResults();
+
+  // 4. Clear simulated rounds from current user's localStorage scoring history
+  const localRaw = localStorage.getItem('f1fantasy_scoring_history');
+  if (localRaw) {
+    try {
+      const localHistory = JSON.parse(localRaw);
+      const cleanedLocal = {};
+      for (const [round, entry] of Object.entries(localHistory)) {
+        if (!entry.simulated) cleanedLocal[round] = entry;
+      }
+      localStorage.setItem('f1fantasy_scoring_history', JSON.stringify(cleanedLocal));
+    } catch { /* ignore parse errors */ }
+  }
+
+  // 5. Reset cached standings
+  saveCachedResults({
+    raceResults: [],
+    qualifying: [],
+    sprintResults: [],
+    driverStandings: [],
+    constructorStandings: [],
+    schedule: [],
+  });
+
+  // 6. Emit hooks to trigger view re-renders
+  emit(HookEvents.DRIVER_STANDINGS_UPDATED, []);
+  emit(HookEvents.CONSTRUCTOR_STANDINGS_UPDATED, []);
+  emit(HookEvents.DATA_SYNC_COMPLETE);
 
   return { deletedCount: testUsers.length };
 }
@@ -459,11 +511,123 @@ export async function simulateRace(round) {
     });
   }
 
+  // 5. Score non-test users (including admin)
+  const nonTestUsers = allUsers.filter(u => !u.isTestUser && u.team);
+  const currentUser = getCurrentUser();
+  let currentUserRoundEntry = null;
+
+  for (const user of nonTestUsers) {
+    if (!(user.team.drivers || []).some(Boolean)) continue;
+    const boosts = user.boosts || {};
+    const teamScore = calculateTeamScore(user.team, weekendScores, boosts);
+    const roundEntry = {
+      driverScores: teamScore.driverBreakdown,
+      constructorScore: teamScore.constructorTotal,
+      total: teamScore.teamTotal,
+      raceName: raceData.raceName,
+      timestamp: new Date().toISOString(),
+      simulated: true,
+    };
+
+    if (currentUser && user.id === currentUser.uid) {
+      currentUserRoundEntry = roundEntry;
+    }
+
+    const scoringHistory = { ...(user.scoringHistory || {}) };
+    scoringHistory[round] = roundEntry;
+    await updateDoc(doc(db, 'users', user.id), {
+      scoringHistory,
+      lastActive: new Date(),
+    });
+  }
+
+  // 6. Update current user's localStorage for immediate UI refresh
+  if (currentUser && currentUserRoundEntry) {
+    const localRaw = localStorage.getItem('f1fantasy_scoring_history');
+    const localHistory = localRaw ? JSON.parse(localRaw) : {};
+    localHistory[round] = currentUserRoundEntry;
+    localStorage.setItem('f1fantasy_scoring_history', JSON.stringify(localHistory));
+  }
+
+  // 7. Cache weekendScores and build standings
+  const testResultsCache = loadTestResults();
+  testResultsCache[round] = weekendScores;
+  saveTestResults(testResultsCache);
+  buildAndCacheStandings(testResultsCache);
+
   return {
     round,
     raceName: raceData.raceName,
     raceData,
     weekendScores,
     testUsersScored: testUsers.length,
+    realUsersScored: nonTestUsers.length,
   };
+}
+
+// ===== Standings Builder =====
+
+/**
+ * Build cumulative WDC/WCC standings from all simulated rounds and cache them.
+ * Outputs Ergast API format so views.js renderStandings() works unchanged.
+ */
+function buildAndCacheStandings(testResults) {
+  const driverPointsMap = {};
+
+  for (const weekendScores of Object.values(testResults)) {
+    const { driverScores } = weekendScores;
+
+    for (const [driverId, score] of Object.entries(driverScores || {})) {
+      if (!driverPointsMap[driverId]) driverPointsMap[driverId] = 0;
+      // Use race finish points (standard F1 championship points), clamped to 0 for DNFs
+      const raceFinish = Math.max(0, score.finish || 0);
+      const sprintFinish = Math.max(0, score.sprintPoints || 0);
+      driverPointsMap[driverId] += raceFinish + sprintFinish;
+    }
+  }
+
+  // Build constructor points by summing their drivers' championship points
+  const constructorPointsMap = {};
+  for (const [driverId, points] of Object.entries(driverPointsMap)) {
+    const d = DRIVERS.find(d => d.id === driverId);
+    if (!d) continue;
+    if (!constructorPointsMap[d.team]) constructorPointsMap[d.team] = 0;
+    constructorPointsMap[d.team] += points;
+  }
+
+  // Format as Ergast API standings
+  const driverStandings = Object.entries(driverPointsMap)
+    .map(([driverId, points]) => {
+      const d = DRIVERS.find(d => d.id === driverId);
+      const c = CONSTRUCTORS.find(c => c.id === d?.team);
+      return {
+        position: '0',
+        points: String(points),
+        Driver: { driverId, givenName: d?.firstName || '', familyName: d?.lastName || '' },
+        Constructors: c ? [{ constructorId: c.id, name: c.name }] : [],
+      };
+    })
+    .sort((a, b) => Number(b.points) - Number(a.points))
+    .map((entry, i) => ({ ...entry, position: String(i + 1) }));
+
+  const constructorStandings = Object.entries(constructorPointsMap)
+    .map(([cId, points]) => {
+      const c = CONSTRUCTORS.find(c => c.id === cId);
+      return {
+        position: '0',
+        points: String(points),
+        Constructor: { constructorId: cId, name: c?.name || '' },
+      };
+    })
+    .sort((a, b) => Number(b.points) - Number(a.points))
+    .map((entry, i) => ({ ...entry, position: String(i + 1) }));
+
+  const cached = loadCachedResults();
+  cached.driverStandings = driverStandings;
+  cached.constructorStandings = constructorStandings;
+  saveCachedResults(cached);
+
+  emit(HookEvents.DRIVER_STANDINGS_UPDATED, driverStandings);
+  emit(HookEvents.CONSTRUCTOR_STANDINGS_UPDATED, constructorStandings);
+  emit(HookEvents.DATA_SYNC_COMPLETE);
 }
