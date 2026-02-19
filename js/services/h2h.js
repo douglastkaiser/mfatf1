@@ -133,7 +133,6 @@ export function computeH2HStandings(schedule, usersMap, currentRound) {
     if (result === 'pending') continue;
 
     if (result === 'bye') {
-      records[home].wins++;
       records[home].byes++;
       records[home].played++;
       continue;

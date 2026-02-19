@@ -4,7 +4,7 @@
 
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, RACE_CALENDAR, getFlag } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
-import { loadCachedResults } from '../services/storage.js';
+import { loadCachedResults, loadTestResults } from '../services/storage.js';
 
 export function initViews() {
   renderDriversTable();
@@ -30,14 +30,38 @@ function renderDriversTable() {
   const sortVal = document.getElementById('drivers-sort')?.value || 'price-desc';
   const teamFilter = document.getElementById('drivers-team-filter')?.value || 'all';
 
-  let drivers = DRIVERS.map(d => ({
-    ...d,
-    teamName: CONSTRUCTORS.find(c => c.id === d.team)?.shortName || d.team,
-    color: TEAM_COLORS[d.team] || '#555',
-    totalPoints: 0,
-    avgPoints: 0,
-    lastRace: '--',
-  }));
+  // Load standings and test results for overlay
+  const cached = loadCachedResults();
+  const driverStandings = cached.driverStandings || [];
+  const standingsMap = {};
+  for (const s of driverStandings) {
+    standingsMap[s.Driver?.driverId] = { totalPoints: Number(s.points) || 0 };
+  }
+
+  const testResults = loadTestResults();
+  const roundKeys = Object.keys(testResults).sort((a, b) => Number(a) - Number(b));
+  const numRounds = roundKeys.length;
+  const lastRound = numRounds > 0 ? roundKeys[roundKeys.length - 1] : null;
+
+  let drivers = DRIVERS.map(d => {
+    const standing = standingsMap[d.id];
+    const totalPoints = standing?.totalPoints || 0;
+
+    let lastRace = '--';
+    if (lastRound && testResults[lastRound]?.driverScores?.[d.id]) {
+      const lastScore = testResults[lastRound].driverScores[d.id];
+      lastRace = String(Math.max(0, lastScore.finish || 0));
+    }
+
+    return {
+      ...d,
+      teamName: CONSTRUCTORS.find(c => c.id === d.team)?.shortName || d.team,
+      color: TEAM_COLORS[d.team] || '#555',
+      totalPoints,
+      avgPoints: numRounds > 0 ? Math.round((totalPoints / numRounds) * 10) / 10 : 0,
+      lastRace,
+    };
+  });
 
   if (teamFilter !== 'all') {
     drivers = drivers.filter(d => d.team === teamFilter);
@@ -89,18 +113,38 @@ function setupDriverFilters() {
 function renderConstructorsTable() {
   const body = document.getElementById('constructors-table-body');
 
+  // Load standings and test results for overlay
+  const cached = loadCachedResults();
+  const constructorStandings = cached.constructorStandings || [];
+  const standingsMap = {};
+  for (const s of constructorStandings) {
+    standingsMap[s.Constructor?.constructorId] = Number(s.points) || 0;
+  }
+
+  const testResults = loadTestResults();
+  const qualiMap = {};
+  const pitMap = {};
+  for (const ws of Object.values(testResults)) {
+    for (const [cId, cScore] of Object.entries(ws.constructorScores || {})) {
+      if (!qualiMap[cId]) qualiMap[cId] = 0;
+      if (!pitMap[cId]) pitMap[cId] = 0;
+      qualiMap[cId] += cScore.qualifyingBonus || 0;
+      pitMap[cId] += cScore.pitStopPoints || 0;
+    }
+  }
+
   const constructors = CONSTRUCTORS.map(c => ({
     ...c,
     driverNames: c.drivers.map(id => {
       const d = DRIVERS.find(d => d.id === id);
       return d ? `${d.firstName} ${d.lastName}` : id;
     }).join(', '),
-    totalPoints: 0,
-    qualiBonus: 0,
-    pitStopPts: 0,
+    totalPoints: standingsMap[c.id] || 0,
+    qualiBonus: qualiMap[c.id] || 0,
+    pitStopPts: pitMap[c.id] || 0,
   }));
 
-  constructors.sort((a, b) => b.price - a.price);
+  constructors.sort((a, b) => b.totalPoints - a.totalPoints || b.price - a.price);
 
   body.innerHTML = constructors.map((c, i) => `
     <tr>

@@ -61,6 +61,10 @@ export function isFirebaseReady() {
   return firebaseReady;
 }
 
+export function getDb() {
+  return db;
+}
+
 // ===== Auth State =====
 
 export function onAuthChanged(callback) {

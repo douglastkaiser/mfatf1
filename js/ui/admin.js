@@ -9,12 +9,14 @@ import {
 import { generateRoundRobinSchedule } from '../services/h2h.js';
 import { emit, HookEvents } from '../services/hooks.js';
 import { showToast } from './toast.js';
+import { initTestMode } from './test-mode.js';
 
 export function initAdmin() {
   if (!isAdmin()) return;
   setupAnnouncementForm();
   initH2HAdminCard();
   renderAdminPanel();
+  initTestMode();
 }
 
 async function renderAdminPanel() {

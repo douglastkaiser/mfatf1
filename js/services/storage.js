@@ -15,6 +15,7 @@ const KEYS = {
   CACHED_RESULTS: `${STORAGE_PREFIX}cached_results`,
   PREFERENCES: `${STORAGE_PREFIX}preferences`,
   GUEST_PROFILE: `${STORAGE_PREFIX}guest_profile`,
+  TEST_RESULTS: `${STORAGE_PREFIX}test_results`,
 };
 
 // ===== Cloud Sync (debounced) =====
@@ -174,6 +175,20 @@ export function loadPreferences() {
 
 export function savePreferences(prefs) {
   write(KEYS.PREFERENCES, prefs);
+}
+
+// ===== Test Results (sim mode) =====
+
+export function loadTestResults() {
+  return read(KEYS.TEST_RESULTS) || {};
+}
+
+export function saveTestResults(results) {
+  write(KEYS.TEST_RESULTS, results);
+}
+
+export function clearTestResults() {
+  localStorage.removeItem(KEYS.TEST_RESULTS);
 }
 
 // ===== Utility =====
