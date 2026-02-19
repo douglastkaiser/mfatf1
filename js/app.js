@@ -20,6 +20,7 @@ import { initAuthUI } from './ui/auth.js';
 import { initLeaderboard, renderLeaderboard } from './ui/leaderboard.js';
 import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
+import { initNews, renderNews } from './ui/news.js';
 
 // ===== DOM References =====
 
@@ -44,6 +45,7 @@ function switchView(viewName) {
   if (viewName === 'dashboard') requestAnimationFrame(() => renderPointsChart());
   if (viewName === 'leaderboard') renderLeaderboard();
   if (viewName === 'h2h') renderH2H();
+  if (viewName === 'news') renderNews();
 }
 
 function initNavigation() {
@@ -469,6 +471,7 @@ async function showApp(user) {
     initViews();
     initLeaderboard();
     initH2H();
+    initNews();
 
     if (isAdmin()) {
       initAdmin();
@@ -507,6 +510,7 @@ export function enterGuestMode() {
     initDashboard();
     initTeamUI();
     initViews();
+    initNews();
     initGuestProfile();
     startPolling();
     appBooted = true;
@@ -554,6 +558,7 @@ function boot() {
     initDashboard();
     initTeamUI();
     initViews();
+    initNews();
     startPolling();
     appBooted = true;
     return;
