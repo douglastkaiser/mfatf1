@@ -89,6 +89,7 @@
         <button class="nav-btn" data-view="standings" data-nav-priority="secondary">Standings</button>
         <button class="nav-btn" data-view="calendar" data-nav-priority="secondary">Calendar</button>
         <button class="nav-btn" data-view="news" data-nav-priority="secondary">News</button>
+        <button class="nav-btn" data-view="chat" data-nav-priority="secondary" id="nav-chat" style="display:none">Chat</button>
         <button class="nav-btn nav-btn--admin" data-view="admin" id="nav-admin" style="display:none">Admin</button>
       </nav>
       <div class="top-bar__right">
@@ -624,6 +625,50 @@
         </div>
       </section>
 
+      <!-- Chat View -->
+      <section class="view" id="view-chat">
+        <div class="chat-layout">
+
+          <!-- Left panel: conversation list -->
+          <div class="chat-panel" id="chat-panel">
+            <div class="chat-panel__header">
+              <h2>Messages</h2>
+              <button class="btn btn--sm" id="chat-new-btn">+ New Chat</button>
+            </div>
+            <div class="chat-list" id="chat-list">
+              <div class="chat-status-msg">Loading conversations...</div>
+            </div>
+            <div class="chat-panel__footer">
+              <span class="chat-e2e-badge">&#128274; End-to-end encrypted</span>
+            </div>
+          </div>
+
+          <!-- Right panel: active thread -->
+          <div class="chat-messages-panel" id="chat-messages-panel">
+            <div class="chat-thread-header" id="chat-thread-header">
+              <span class="chat-thread-header__placeholder">Select a conversation</span>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-status-msg chat-status-msg--center">
+                Select a conversation from the left, or start a new one.
+              </div>
+            </div>
+            <form class="chat-send-form" id="chat-send-form">
+              <input
+                type="text"
+                class="chat-input"
+                id="chat-input"
+                placeholder="Type a message..."
+                autocomplete="off"
+                disabled
+              >
+              <button type="submit" class="btn btn--primary chat-send-btn" disabled>Send</button>
+            </form>
+          </div>
+
+        </div>
+      </section>
+
       <!-- News View -->
       <section class="view" id="view-news">
         <div class="news-view">
@@ -743,6 +788,10 @@
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128240;</span>
         News
       </button>
+      <button class="bottom-nav-drawer-item" data-view="chat" id="bottom-nav-chat" style="display:none">
+        <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#128172;</span>
+        Chat
+      </button>
       <button class="bottom-nav-drawer-item" data-view="h2h">
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9876;</span>
         H2H
@@ -751,6 +800,31 @@
         <span class="bottom-nav-drawer-item__icon" aria-hidden="true">&#9881;</span>
         Admin
       </button>
+    </div>
+
+    <!-- New Chat Modal -->
+    <div class="chat-new-modal" id="chat-new-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="chat-new-modal-title">
+      <div class="chat-new-modal__backdrop"></div>
+      <div class="chat-new-modal__panel">
+        <div class="chat-new-modal__header">
+          <h3 id="chat-new-modal-title">New Conversation</h3>
+          <button type="button" class="picker__close" id="chat-new-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="chat-new-modal__body">
+          <div class="auth-field">
+            <label for="chat-new-name">Group name <span class="text-muted">(optional — leave blank for a direct message)</span></label>
+            <input type="text" id="chat-new-name" placeholder="e.g. Race Strategy Squad" autocomplete="off">
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem">Select who to include:</p>
+          <div class="chat-member-list" id="chat-member-list">
+            <div class="chat-status-msg">Loading...</div>
+          </div>
+          <div class="auth-error" id="chat-new-error" style="margin-top:0.75rem"></div>
+        </div>
+        <div class="chat-new-modal__footer">
+          <button class="btn btn--primary" id="chat-new-create-btn">Start Chat</button>
+        </div>
+      </div>
     </div>
 
     <!-- Guest Profile Modal -->
