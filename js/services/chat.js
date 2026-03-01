@@ -85,7 +85,7 @@ export async function createChat(participantUids, name = null) {
   for (const uid of allUids) {
     const snap = await getDoc(doc(db, 'users', uid));
     const keyB64 = snap.data()?.chatPublicKey;
-    if (!keyB64) throw new Error(`A selected member hasn't enabled chat yet. Ask them to open the Chat tab first.`);
+    if (!keyB64) throw new Error(`A selected member's chat keys aren't ready yet. Ask them to sign in so their keys can be set up.`);
     publicKeys[uid] = await importPublicKey(keyB64);
   }
 

@@ -1578,6 +1578,26 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   background: linear-gradient(135deg, #f5c518 0%, #e10600 100%) !important;
 }
 
+/* ===== Chat Unread Badge ===== */
+/* Red dot shown on the Chat nav buttons when a new message arrives */
+#nav-chat.has-unread::after,
+#bottom-nav-chat.has-unread::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-red);
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+  pointer-events: none;
+}
+
+#bottom-nav-chat.has-unread {
+  position: relative;
+}
+
 /* ===== Announcement Form ===== */
 .announcement-form {
   display: flex;

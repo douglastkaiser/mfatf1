@@ -22,11 +22,45 @@ import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
 import { initNews, renderNews } from './ui/news.js';
 import { initChat, destroyChat } from './ui/chat.js';
+import { initUserChatKeys, subscribeToUserChats } from './services/chat.js';
 
 // ===== DOM References =====
 
 const authScreen = document.getElementById('auth-screen');
 const appEl = document.getElementById('app');
+
+// ===== Chat Unread Badge =====
+
+let _chatUnreadSub = null;
+let _chatLastViewedAt = null;
+
+function _showChatBadge() {
+  document.getElementById('nav-chat')?.classList.add('has-unread');
+  document.getElementById('bottom-nav-chat')?.classList.add('has-unread');
+}
+
+function _clearChatBadge() {
+  document.getElementById('nav-chat')?.classList.remove('has-unread');
+  document.getElementById('bottom-nav-chat')?.classList.remove('has-unread');
+  _chatLastViewedAt = new Date();
+}
+
+function _startChatUnreadTracking() {
+  if (_chatUnreadSub) { _chatUnreadSub(); _chatUnreadSub = null; }
+  _chatUnreadSub = subscribeToUserChats((chats) => {
+    if (document.getElementById('view-chat')?.classList.contains('active')) {
+      _chatLastViewedAt = new Date();
+      return;
+    }
+    const latestActivity = chats.reduce((max, chat) => {
+      const t = chat.lastMessageAt?.toDate?.();
+      return t && (!max || t > max) ? t : max;
+    }, null);
+    if (latestActivity && (!_chatLastViewedAt || latestActivity > _chatLastViewedAt)) {
+      _showChatBadge();
+    }
+  });
+}
 
 // ===== Navigation =====
 
@@ -47,7 +81,7 @@ function switchView(viewName) {
   if (viewName === 'leaderboard') renderLeaderboard();
   if (viewName === 'h2h') renderH2H();
   if (viewName === 'news') renderNews();
-  if (viewName === 'chat') initChat();
+  if (viewName === 'chat') { _clearChatBadge(); initChat(); }
 }
 
 function initNavigation() {
@@ -252,6 +286,8 @@ function initUserMenu() {
 
   logoutBtn.addEventListener('click', async () => {
     stopPolling();
+    if (_chatUnreadSub) { _chatUnreadSub(); _chatUnreadSub = null; }
+    _chatLastViewedAt = null;
     destroyChat();
     clearAllData();
     await logout();
@@ -462,6 +498,10 @@ async function showApp(user) {
   const profile = await loadCurrentProfile();
   updateUserUI(profile);
 
+  // Generate and publish chat keys automatically so the user is chat-ready
+  // without needing to open the Chat tab first.
+  initUserChatKeys(user.uid).catch(err => console.warn('[Chat] Background key init:', err));
+
   // Pull cloud data into localStorage if available
   try {
     const cloudData = await loadTeamFromCloud();
@@ -504,6 +544,9 @@ async function showApp(user) {
     initTeam();
     startPolling();
   }
+
+  // Start tracking incoming chats for the unread badge (runs on every login)
+  _startChatUnreadTracking();
 }
 
 export function enterGuestMode() {
