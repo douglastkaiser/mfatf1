@@ -7,28 +7,28 @@ import { loadScoringHistory, loadCachedResults, loadTestResults } from '../servi
 
 // Wikipedia page titles for each driver (used to fetch their headshot)
 const WIKI_TITLES = {
-  norris:          'Lando_Norris',
-  max_verstappen:  'Max_Verstappen',
-  russell:         'George_Russell_(racing_driver)',
-  leclerc:         'Charles_Leclerc',
-  piastri:         'Oscar_Piastri',
-  hamilton:        'Lewis_Hamilton',
-  antonelli:       'Andrea_Kimi_Antonelli',
-  sainz:           'Carlos_Sainz_Jr.',
-  alonso:          'Fernando_Alonso',
-  gasly:           'Pierre_Gasly',
-  hadjar:          'Isack_Hadjar',
-  lawson:          'Liam_Lawson_(racing_driver)',
-  albon:           'Alexander_Albon',
-  ocon:            'Esteban_Ocon',
-  hulkenberg:      'Nico_Hülkenberg',
-  stroll:          'Lance_Stroll',
-  bearman:         'Oliver_Bearman',
-  colapinto:       'Franco_Colapinto',
-  perez:           'Sergio_Pérez',
-  bortoleto:       'Gabriel_Bortoleto',
-  bottas:          'Valtteri_Bottas',
-  lindblad:        'Arvid_Lindblad',
+  norris:         'Lando_Norris',
+  max_verstappen: 'Max_Verstappen',
+  russell:        'George_Russell_(racing_driver)',
+  leclerc:        'Charles_Leclerc',
+  piastri:        'Oscar_Piastri',
+  hamilton:       'Lewis_Hamilton',
+  antonelli:      'Andrea_Kimi_Antonelli',
+  sainz:          'Carlos_Sainz_Jr.',
+  alonso:         'Fernando_Alonso',
+  gasly:          'Pierre_Gasly',
+  hadjar:         'Isack_Hadjar',
+  lawson:         'Liam_Lawson_(racing_driver)',
+  albon:          'Alexander_Albon',
+  ocon:           'Esteban_Ocon',
+  hulkenberg:     'Nico_Hülkenberg',
+  stroll:         'Lance_Stroll',
+  bearman:        'Oliver_Bearman',
+  colapinto:      'Franco_Colapinto',
+  perez:          'Sergio_Pérez',
+  bortoleto:      'Gabriel_Bortoleto',
+  bottas:         'Valtteri_Bottas',
+  lindblad:       'Arvid_Lindblad',
 };
 
 // In-memory cache so each driver is only fetched once per session
@@ -47,8 +47,8 @@ async function fetchDriverPhoto(driverId) {
     if (!res.ok) { _photoCache[driverId] = null; return null; }
     const data = await res.json();
     const raw = data.thumbnail?.source || null;
-    // Bump thumbnail to 320 px wide for a decent quality image
-    const url = raw ? raw.replace(/\/\d+px-/, '/320px-') : null;
+    // Request a 320 px wide version — Wikimedia serves any width on demand
+    const url = raw ? raw.replace(/\/(\d+)px-([^/]+)$/, '/320px-$2') : null;
     _photoCache[driverId] = url;
     return url;
   } catch {
@@ -133,30 +133,28 @@ export function openDriverProfile(driverId) {
   const panel = document.getElementById('driver-profile-panel');
   panel.style.setProperty('--dp-team-color', color);
 
-  // Photo: hide initially while we fetch; show a loading shimmer
+  // Photo: reset to invisible; preload via Image() then fade in
   const photo = document.getElementById('driver-profile-photo');
   photo.src = '';
-  photo.style.display = 'none';
-  photo.classList.add('driver-profile__photo--loading');
+  photo.alt = '';
+  photo.style.opacity = '0';
+  // Tag the element with the current driver so stale callbacks can self-cancel
+  photo.dataset.forDriver = driverId;
 
-  // Fetch photo asynchronously so the modal opens instantly
   fetchDriverPhoto(driverId).then(url => {
-    // Only update if this driver's modal is still open
-    if (modal.hidden) return;
-    if (url) {
-      photo.onload = () => {
-        photo.classList.remove('driver-profile__photo--loading');
-        photo.style.display = '';
-      };
-      photo.onerror = () => {
-        photo.classList.remove('driver-profile__photo--loading');
-        photo.style.display = 'none';
-      };
+    // Bail out if a different profile is now showing, or modal was closed
+    if (modal.hidden || photo.dataset.forDriver !== driverId || !url) return;
+
+    // Preload via a detached Image so the real <img> src switches without flash
+    const tmp = new Image();
+    tmp.onload = () => {
+      if (photo.dataset.forDriver !== driverId) return; // stale
       photo.src = url;
       photo.alt = `${driver.firstName} ${driver.lastName}`;
-    } else {
-      photo.classList.remove('driver-profile__photo--loading');
-    }
+      // rAF ensures the browser has painted before we start the transition
+      requestAnimationFrame(() => { photo.style.opacity = '1'; });
+    };
+    tmp.src = url;
   });
 
   // Number overlay
