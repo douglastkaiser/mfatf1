@@ -1579,9 +1579,9 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
 }
 
 /* ===== Chat Unread Badge ===== */
-/* Red dot shown on the Chat nav buttons when a new message arrives */
-#nav-chat.has-unread::after,
-#bottom-nav-chat.has-unread::after {
+/* Red dot shown on the Community nav buttons when a new message arrives */
+#nav-community.has-unread::after,
+#bottom-nav-community.has-unread::after {
   content: '';
   position: absolute;
   top: 4px;
@@ -1594,7 +1594,7 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   pointer-events: none;
 }
 
-#bottom-nav-chat.has-unread {
+#bottom-nav-community.has-unread {
   position: relative;
 }
 
@@ -2121,15 +2121,41 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   max-width: 320px;
 }
 
+/* ===== Sub-Navigation (in-page tab bar for grouped views) ===== */
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sub-nav::-webkit-scrollbar { display: none; }
+
+.sub-nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 1.1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.sub-nav-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.sub-nav-btn.active {
+  color: var(--accent-red);
+  background: rgba(225, 6, 0, 0.08);
+}
+
+.sub-view { display: none; }
+.sub-view.active { display: block; }
+
 /* ===== Nav Visual Hierarchy (P2.5) ===== */
-.nav-btn[data-nav-priority="secondary"] {
-  font-size: 0.73rem;
-  opacity: 0.6;
-}
-.nav-btn[data-nav-priority="secondary"]:hover,
-.nav-btn[data-nav-priority="secondary"].active {
-  opacity: 1;
-}
 .nav-divider {
   width: 1px;
   height: 18px;
