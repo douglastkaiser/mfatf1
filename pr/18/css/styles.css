@@ -3279,20 +3279,33 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
 }
 
 .driver-profile-popup__avatar {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.25rem;
-  font-weight: 800;
   color: #fff;
   background: var(--driver-team-color, var(--accent-red));
   border: 3px solid rgba(255, 255, 255, 0.15);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.driver-profile-popup__headshot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.driver-profile-popup__initials {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .driver-profile-popup__number {

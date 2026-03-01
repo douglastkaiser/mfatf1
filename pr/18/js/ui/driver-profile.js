@@ -13,6 +13,19 @@ const NATIONALITY_NAMES = {
   MEX: 'Mexican', BRA: 'Brazilian', FIN: 'Finnish',
 };
 
+/**
+ * Build the official F1 media CDN headshot URL for a driver.
+ * Pattern: media.formula1.com/content/dam/fom-website/drivers/{F}/{CODE}_{First}_{Last}/{code}.png.transform/2col/image.png
+ */
+function getDriverHeadshotUrl(driver) {
+  const first3 = driver.firstName.slice(0, 3).toUpperCase();
+  const last3 = driver.lastName.slice(0, 3).toUpperCase();
+  const code = `${first3}${last3}01`;
+  const codeLower = code.toLowerCase();
+  const firstLetter = driver.firstName.charAt(0).toUpperCase();
+  return `https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/${firstLetter}/${code}_${driver.firstName}_${driver.lastName}/${codeLower}.png.transform/2col/image.png`;
+}
+
 let _popup = null;
 
 export function initDriverProfile() {
@@ -33,11 +46,15 @@ export function openDriverProfile(driverId) {
   const constructor = CONSTRUCTORS.find(c => c.id === driver.team);
   const color = TEAM_COLORS[driver.team] || '#555';
 
-  // Avatar: driver initials
+  // Avatar: driver headshot with initials fallback
   const initials = `${driver.firstName.charAt(0)}${driver.lastName.charAt(0)}`;
   const avatarEl = document.getElementById('driver-profile-avatar');
-  avatarEl.textContent = initials;
+  const headshotUrl = getDriverHeadshotUrl(driver);
   avatarEl.style.background = color;
+  avatarEl.innerHTML = `<img src="${headshotUrl}" alt="${driver.firstName} ${driver.lastName}"
+    class="driver-profile-popup__headshot"
+    onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+  ><span class="driver-profile-popup__initials" style="display:none">${initials}</span>`;
 
   // Hero border color
   const heroEl = document.getElementById('driver-profile-hero');
