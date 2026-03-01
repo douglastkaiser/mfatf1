@@ -5,13 +5,56 @@
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, getFlag } from '../config.js';
 import { loadScoringHistory, loadCachedResults, loadTestResults } from '../services/storage.js';
 
-function getDriverPhotoUrl(driver) {
-  const letter = driver.firstName[0].toUpperCase();
-  const code = driver.code;
-  const first = driver.firstName;
-  const last = driver.lastName;
-  const num = driver.number;
-  return `https://www.formula1.com/content/dam/fom-website/drivers/${letter}/${code}01_${first}_${last}/${first.toLowerCase()}_${last.toLowerCase()}-${num}.png`;
+// Wikipedia page titles for each driver (used to fetch their headshot)
+const WIKI_TITLES = {
+  norris:          'Lando_Norris',
+  max_verstappen:  'Max_Verstappen',
+  russell:         'George_Russell_(racing_driver)',
+  leclerc:         'Charles_Leclerc',
+  piastri:         'Oscar_Piastri',
+  hamilton:        'Lewis_Hamilton',
+  antonelli:       'Andrea_Kimi_Antonelli',
+  sainz:           'Carlos_Sainz_Jr.',
+  alonso:          'Fernando_Alonso',
+  gasly:           'Pierre_Gasly',
+  hadjar:          'Isack_Hadjar',
+  lawson:          'Liam_Lawson_(racing_driver)',
+  albon:           'Alexander_Albon',
+  ocon:            'Esteban_Ocon',
+  hulkenberg:      'Nico_Hülkenberg',
+  stroll:          'Lance_Stroll',
+  bearman:         'Oliver_Bearman',
+  colapinto:       'Franco_Colapinto',
+  perez:           'Sergio_Pérez',
+  bortoleto:       'Gabriel_Bortoleto',
+  bottas:          'Valtteri_Bottas',
+  lindblad:        'Arvid_Lindblad',
+};
+
+// In-memory cache so each driver is only fetched once per session
+const _photoCache = {};
+
+async function fetchDriverPhoto(driverId) {
+  if (_photoCache[driverId] !== undefined) return _photoCache[driverId];
+
+  const title = WIKI_TITLES[driverId];
+  if (!title) { _photoCache[driverId] = null; return null; }
+
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+    );
+    if (!res.ok) { _photoCache[driverId] = null; return null; }
+    const data = await res.json();
+    const raw = data.thumbnail?.source || null;
+    // Bump thumbnail to 320 px wide for a decent quality image
+    const url = raw ? raw.replace(/\/\d+px-/, '/320px-') : null;
+    _photoCache[driverId] = url;
+    return url;
+  } catch {
+    _photoCache[driverId] = null;
+    return null;
+  }
 }
 
 export function initDriverProfile() {
@@ -86,17 +129,35 @@ export function openDriverProfile(driverId) {
     if (sc?.finish !== undefined) lastRaceFinish = sc.finish;
   }
 
-  // Hero area — team color bar + number badge
+  // Apply team color to panel
   const panel = document.getElementById('driver-profile-panel');
   panel.style.setProperty('--dp-team-color', color);
 
-  // Photo
+  // Photo: hide initially while we fetch; show a loading shimmer
   const photo = document.getElementById('driver-profile-photo');
-  const photoUrl = getDriverPhotoUrl(driver);
-  photo.src = photoUrl;
-  photo.alt = `${driver.firstName} ${driver.lastName}`;
-  photo.style.display = '';
-  photo.onerror = () => { photo.style.display = 'none'; };
+  photo.src = '';
+  photo.style.display = 'none';
+  photo.classList.add('driver-profile__photo--loading');
+
+  // Fetch photo asynchronously so the modal opens instantly
+  fetchDriverPhoto(driverId).then(url => {
+    // Only update if this driver's modal is still open
+    if (modal.hidden) return;
+    if (url) {
+      photo.onload = () => {
+        photo.classList.remove('driver-profile__photo--loading');
+        photo.style.display = '';
+      };
+      photo.onerror = () => {
+        photo.classList.remove('driver-profile__photo--loading');
+        photo.style.display = 'none';
+      };
+      photo.src = url;
+      photo.alt = `${driver.firstName} ${driver.lastName}`;
+    } else {
+      photo.classList.remove('driver-profile__photo--loading');
+    }
+  });
 
   // Number overlay
   document.getElementById('driver-profile-number').textContent = driver.number;
