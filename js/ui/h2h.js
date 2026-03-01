@@ -25,8 +25,9 @@ export function initH2H() {
 
   // Re-render when scores are calculated or schedule is regenerated
   on(HookEvents.FANTASY_SCORES_CALCULATED, () => {
-    const h2hView = document.getElementById('view-h2h');
-    if (h2hView?.classList.contains('active')) renderH2H();
+    const leagueActive = document.getElementById('view-league')?.classList.contains('active');
+    const h2hActive = document.getElementById('sub-h2h')?.classList.contains('active');
+    if (leagueActive && h2hActive) renderH2H();
   });
   on(HookEvents.H2H_SCHEDULE_UPDATED, () => renderH2H());
 }
