@@ -3275,6 +3275,22 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
 }
 
+.driver-profile__photo--loading {
+  display: block !important;
+  width: 120px;
+  height: 180px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: dp-shimmer 1.4s infinite;
+  border-radius: 8px 8px 0 0;
+  filter: none;
+}
+
+@keyframes dp-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .driver-profile__number-badge {
   position: absolute;
   top: 1rem;
