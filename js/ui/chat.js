@@ -320,7 +320,7 @@ function _renderMemberPicker(users) {
     listEl.innerHTML = `
       <div class="chat-status-msg">
         No other members are chat-ready yet.<br>
-        Ask them to open the Chat tab so their keys can be set up.
+        Ask them to sign in so their keys can be set up automatically.
       </div>`;
     return;
   }
