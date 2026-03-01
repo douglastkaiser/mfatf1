@@ -3202,3 +3202,223 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   .news-card__thumb { display: none; }
   .news-view { padding: 1rem 0.75rem; }
 }
+
+/* ===== Driver Profile Popup ===== */
+.driver-profile-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.driver-profile-popup__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.driver-profile-popup__panel {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-elevated);
+  overflow: hidden;
+  animation: driverProfileSlideIn 0.25s ease-out;
+}
+
+@keyframes driverProfileSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.driver-profile-popup__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.driver-profile-popup__close:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.driver-profile-popup__hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem 1.25rem;
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-primary) 100%);
+  border-bottom: 3px solid var(--driver-team-color, var(--accent-red));
+}
+
+.driver-profile-popup__avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--driver-team-color, var(--accent-red));
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.driver-profile-popup__number {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 2px solid var(--driver-team-color, var(--accent-red));
+  border-radius: 20px;
+  padding: 0.15rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--driver-team-color, var(--accent-red));
+  white-space: nowrap;
+}
+
+.driver-profile-popup__body {
+  padding: 1.75rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+.driver-profile-popup__name {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.driver-profile-popup__team {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--driver-team-color, var(--text-secondary));
+  margin-bottom: 1.25rem;
+}
+
+.driver-profile-popup__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.driver-profile-popup__stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.5rem;
+  text-align: center;
+}
+
+.driver-profile-popup__stat-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.driver-profile-popup__stat-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Clickable driver elements */
+.driver-card[data-driver-id],
+.driver-name[data-driver-id],
+.performer[data-driver-id],
+tr[data-driver-id],
+.slot--filled[data-driver-id] {
+  cursor: pointer;
+}
+
+.driver-card[data-driver-id]:hover {
+  transform: translateY(-3px);
+}
+
+tr[data-driver-id]:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.performer[data-driver-id]:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+}
+
+.leaderboard-driver-code[data-driver-id] {
+  cursor: pointer;
+  padding: 0.1rem 0.25rem;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.leaderboard-driver-code[data-driver-id]:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+.slot__driver-name {
+  transition: color 0.15s;
+}
+
+.slot--filled[data-driver-id] .slot__driver-name:hover {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .driver-profile-popup__panel {
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  .driver-profile-popup__avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 1.8rem;
+  }
+
+  .driver-profile-popup__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

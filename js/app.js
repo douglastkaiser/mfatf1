@@ -23,6 +23,7 @@ import { initAdmin } from './ui/admin.js';
 import { initNews, renderNews } from './ui/news.js';
 import { initChat, destroyChat } from './ui/chat.js';
 import { initUserChatKeys, subscribeToUserChats } from './services/chat.js';
+import { initDriverProfile, closeDriverProfile } from './ui/driver-profile.js';
 
 // ===== DOM References =====
 
@@ -187,6 +188,11 @@ function initEscapeHandler() {
     if (e.key !== 'Escape') return;
 
     // Close modals in reverse priority order
+    const driverProfile = document.getElementById('driver-profile-popup');
+    if (driverProfile && !driverProfile.hasAttribute('hidden')) {
+      closeDriverProfile();
+      return;
+    }
     const picker = document.getElementById('picker');
     if (picker && !picker.hasAttribute('hidden')) {
       import('./ui/team.js').then(m => m.closePicker?.());
@@ -571,6 +577,7 @@ async function showApp(user) {
     initNotifications();
     initUserMenu();
     initAccountSettings();
+    initDriverProfile();
     initDashboard();
     initTeamUI();
     initViews();
@@ -615,6 +622,7 @@ export function enterGuestMode() {
     initNavigation();
     initEscapeHandler();
     initNotifications();
+    initDriverProfile();
     initDashboard();
     initTeamUI();
     initViews();
@@ -663,6 +671,7 @@ function boot() {
     initNavigation();
     initEscapeHandler();
     initNotifications();
+    initDriverProfile();
     initDashboard();
     initTeamUI();
     initViews();

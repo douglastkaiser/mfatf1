@@ -6,6 +6,7 @@ import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, RACE_CALENDAR, getFlag } from '../c
 import { on, HookEvents, getLog } from '../services/hooks.js';
 import { getTeam } from '../models/team.js';
 import { loadScoringHistory } from '../services/storage.js';
+import { openDriverProfile } from './driver-profile.js';
 
 let _lastSyncTime = null; // track last successful sync for activity footer
 
@@ -159,7 +160,7 @@ function renderTeamSummary() {
     const color = TEAM_COLORS[driver.team] || 'var(--border-color)';
     const constructor = CONSTRUCTORS.find(c => c.id === driver.team);
     html += `
-      <div class="performer">
+      <div class="performer" data-driver-id="${driver.id}">
         <span class="performer__color" style="background:${color}"></span>
         <span class="performer__name">${driver.firstName} ${driver.lastName}</span>
         <span class="performer__team">${constructor?.shortName || ''}</span>
@@ -185,6 +186,10 @@ function renderTeamSummary() {
   }
 
   container.innerHTML = html;
+
+  container.querySelectorAll('.performer[data-driver-id]').forEach(el => {
+    el.addEventListener('click', () => openDriverProfile(el.dataset.driverId));
+  });
 }
 
 // ===== Driver Market =====
@@ -196,7 +201,7 @@ function renderDriverMarket() {
     const color = TEAM_COLORS[d.team] || '#555';
     const constructor = CONSTRUCTORS.find(c => c.id === d.team);
     return `
-      <div class="driver-card" style="--driver-team-color:${color}">
+      <div class="driver-card" data-driver-id="${d.id}" style="--driver-team-color:${color}">
         <span class="driver-card__number">${d.number}</span>
         <div class="driver-card__name">${d.lastName}</div>
         <div class="driver-card__team">${constructor?.shortName || d.team}</div>
@@ -207,6 +212,10 @@ function renderDriverMarket() {
       </div>
     `;
   }).join('');
+
+  container.querySelectorAll('.driver-card[data-driver-id]').forEach(card => {
+    card.addEventListener('click', () => openDriverProfile(card.dataset.driverId));
+  });
 }
 
 // ===== Constructors List =====

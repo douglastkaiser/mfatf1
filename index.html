@@ -754,6 +754,23 @@
       </div>
     </div>
 
+    <!-- Driver Profile Popup -->
+    <div class="driver-profile-popup" id="driver-profile-popup" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="driver-profile-name">
+      <div class="driver-profile-popup__backdrop"></div>
+      <div class="driver-profile-popup__panel">
+        <button type="button" class="driver-profile-popup__close" id="driver-profile-close" aria-label="Close driver profile">&times;</button>
+        <div class="driver-profile-popup__hero" id="driver-profile-hero">
+          <div class="driver-profile-popup__avatar" id="driver-profile-avatar"></div>
+          <div class="driver-profile-popup__number" id="driver-profile-number"></div>
+        </div>
+        <div class="driver-profile-popup__body">
+          <h2 class="driver-profile-popup__name" id="driver-profile-name"></h2>
+          <div class="driver-profile-popup__team" id="driver-profile-team"></div>
+          <div class="driver-profile-popup__stats" id="driver-profile-stats"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Container (P0.1) -->
     <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 

@@ -11,6 +11,7 @@ import {
 } from '../models/team.js';
 import { loadScoringHistory } from '../services/storage.js';
 import { showToast } from './toast.js';
+import { openDriverProfile } from './driver-profile.js';
 
 let pickerMode = null; // 'driver' | 'constructor'
 let pickerSlot = null;
@@ -122,7 +123,7 @@ function renderSlots() {
       : '';
 
     return `
-      <div class="slot slot--filled" data-slot="${i}" data-type="driver" style="border-color:${color}">
+      <div class="slot slot--filled" data-slot="${i}" data-type="driver" data-driver-id="${driverId}" style="border-color:${color}">
         <div class="slot__driver">
           <div class="slot__driver-header">
             <span class="slot__driver-name">${driver.firstName} ${driver.lastName}</span>
@@ -222,6 +223,16 @@ function renderSlots() {
           },
         });
       }
+    });
+  });
+
+  // Click driver name in filled slots to open profile popup
+  slotsContainer.querySelectorAll('.slot--filled[data-driver-id] .slot__driver-name').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const slot = el.closest('.slot--filled');
+      if (slot?.dataset.driverId) openDriverProfile(slot.dataset.driverId);
     });
   });
 }

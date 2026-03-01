@@ -4,6 +4,7 @@
 import { getAllUsers, getCurrentUser } from '../services/auth.js';
 import { loadScoringHistory } from '../services/storage.js';
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS } from '../config.js';
+import { openDriverProfile } from './driver-profile.js';
 
 export function initLeaderboard() {
   const refreshBtn = document.getElementById('leaderboard-refresh');
@@ -87,7 +88,7 @@ export async function renderLeaderboard() {
       // Build mini team display
       const teamDrivers = (user.team?.drivers || []).filter(Boolean).map(id => {
         const d = DRIVERS.find(d => d.id === id);
-        return d ? d.code : '?';
+        return d ? `<span class="leaderboard-driver-code" data-driver-id="${d.id}" title="${d.firstName} ${d.lastName}">${d.code}</span>` : '?';
       }).join(', ');
 
       const userConstructors = user.team?.constructors || (user.team?.constructor ? [user.team.constructor] : []);
@@ -116,6 +117,15 @@ export async function renderLeaderboard() {
         </tr>
       `;
     }).join('');
+
+    // Make driver codes clickable in leaderboard
+    container.querySelectorAll('.leaderboard-driver-code[data-driver-id]').forEach(el => {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDriverProfile(el.dataset.driverId);
+      });
+    });
   } catch (err) {
     console.error('[Leaderboard] Failed to load:', err);
     container.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--accent-red)">Failed to load leaderboard. Please try again.</td></tr>';

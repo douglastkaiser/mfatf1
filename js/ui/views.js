@@ -5,6 +5,7 @@
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, RACE_CALENDAR, getFlag } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
 import { loadCachedResults, loadTestResults } from '../services/storage.js';
+import { openDriverProfile } from './driver-profile.js';
 
 export function initViews() {
   renderDriversTable();
@@ -75,7 +76,7 @@ function renderDriversTable() {
   }
 
   body.innerHTML = drivers.map((d, i) => `
-    <tr>
+    <tr data-driver-id="${d.id}">
       <td><span class="pos-badge">${i + 1}</span></td>
       <td>
         <div class="driver-name">
@@ -91,6 +92,10 @@ function renderDriversTable() {
       <td>${d.lastRace}</td>
     </tr>
   `).join('');
+
+  body.querySelectorAll('tr[data-driver-id]').forEach(row => {
+    row.addEventListener('click', () => openDriverProfile(row.dataset.driverId));
+  });
 }
 
 function setupDriverFilters() {
