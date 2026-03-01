@@ -75,7 +75,7 @@ function renderDriversTable() {
   }
 
   body.innerHTML = drivers.map((d, i) => `
-    <tr>
+    <tr data-driver-profile="${d.id}" role="button" tabindex="0" aria-label="View ${d.firstName} ${d.lastName} profile">
       <td><span class="pos-badge">${i + 1}</span></td>
       <td>
         <div class="driver-name">
@@ -178,8 +178,10 @@ function renderStandings() {
       const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || '#555';
       const pos = parseInt(s.position, 10);
       const posClass = pos <= 3 ? ` pos-badge--${pos}` : '';
+      const driverConfig = DRIVERS.find(d => d.id === s.Driver?.driverId);
+      const profileAttr = driverConfig ? `data-driver-profile="${driverConfig.id}" role="button" tabindex="0" aria-label="View ${s.Driver?.givenName} ${s.Driver?.familyName} profile"` : '';
       return `
-        <tr>
+        <tr ${profileAttr}>
           <td><span class="pos-badge${posClass}">${s.position}</span></td>
           <td>
             <div class="driver-name">
@@ -200,7 +202,7 @@ function renderStandings() {
       const constructor = CONSTRUCTORS.find(c => c.id === d.team);
       const posClass = i < 3 ? ` pos-badge--${i + 1}` : '';
       return `
-        <tr>
+        <tr data-driver-profile="${d.id}" role="button" tabindex="0" aria-label="View ${d.firstName} ${d.lastName} profile">
           <td><span class="pos-badge${posClass}">${i + 1}</span></td>
           <td>
             <div class="driver-name">
