@@ -89,24 +89,16 @@ const _GROUP_DEFAULT_SUB = {
   community: 'news',
 };
 
-function _activateSubView(groupName, subViewName) {
-  const groupEl = document.getElementById(`view-${groupName}`);
-  if (!groupEl) return;
+// Navigation history — tracks view names within the webapp
+let _navHistory = [];
+let _currentViewName = 'dashboard';
 
-  groupEl.querySelectorAll('.sub-nav-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.subview === subViewName);
-  });
-  groupEl.querySelectorAll('.sub-view').forEach(sv => {
-    sv.classList.toggle('active', sv.id === `sub-${subViewName}`);
-  });
-
-  if (subViewName === 'leaderboard') renderLeaderboard();
-  if (subViewName === 'h2h') renderH2H();
-  if (subViewName === 'news') renderNews();
-  if (subViewName === 'chat') { _clearChatBadge(); initChat(); }
+function _updateBackBtn() {
+  const btn = document.getElementById('back-btn');
+  if (btn) btn.hidden = _navHistory.length === 0;
 }
 
-function switchView(viewName) {
+function _doSwitchView(viewName) {
   const parentGroup = _SUB_VIEW_PARENT[viewName];
   const targetView = parentGroup || viewName;
 
@@ -127,7 +119,51 @@ function switchView(viewName) {
   if (viewName === 'dashboard') requestAnimationFrame(() => renderPointsChart());
 }
 
+function _activateSubView(groupName, subViewName) {
+  const groupEl = document.getElementById(`view-${groupName}`);
+  if (!groupEl) return;
+
+  groupEl.querySelectorAll('.sub-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.subview === subViewName);
+  });
+  groupEl.querySelectorAll('.sub-view').forEach(sv => {
+    sv.classList.toggle('active', sv.id === `sub-${subViewName}`);
+  });
+
+  if (subViewName === 'leaderboard') renderLeaderboard();
+  if (subViewName === 'h2h') renderH2H();
+  if (subViewName === 'news') renderNews();
+  if (subViewName === 'chat') { _clearChatBadge(); initChat(); }
+}
+
+function switchView(viewName) {
+  if (viewName !== _currentViewName) {
+    _navHistory.push(_currentViewName);
+    _currentViewName = viewName;
+    history.pushState({ appView: viewName }, '');
+  }
+  _doSwitchView(viewName);
+  _updateBackBtn();
+}
+
+function goBack() {
+  // Delegate to browser history — popstate handler does the actual view switch
+  if (_navHistory.length > 0) history.back();
+}
+
 function initNavigation() {
+  // In-app back button → browser back (keeps history in sync)
+  document.getElementById('back-btn')?.addEventListener('click', goBack);
+
+  // Browser back / Alt+← / mouse back button all fire popstate
+  window.addEventListener('popstate', () => {
+    if (_navHistory.length === 0) return; // let browser navigate away naturally
+    const prev = _navHistory.pop();
+    _currentViewName = prev;
+    _doSwitchView(prev);
+    _updateBackBtn();
+  });
+
   // Top nav buttons
   document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
@@ -140,13 +176,7 @@ function initNavigation() {
 
   // Sub-nav buttons within grouped views
   document.querySelectorAll('.sub-nav-btn[data-subview]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const groupEl = btn.closest('.view');
-      if (groupEl) {
-        const groupName = groupEl.id.replace('view-', '');
-        _activateSubView(groupName, btn.dataset.subview);
-      }
-    });
+    btn.addEventListener('click', () => switchView(btn.dataset.subview));
   });
 
   // "More" button opens the drawer
