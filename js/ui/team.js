@@ -104,10 +104,56 @@ function renderLockDeadlineBanner() {
   `;
 }
 
+function renderHeaderLockPill() {
+  const pill = document.getElementById('header-lock-pill');
+  if (!pill) return;
+
+  const info = getNextQualiDeadline();
+  if (!info) {
+    pill.innerHTML = '';
+    return;
+  }
+
+  const { race, deadline } = info;
+  const diff = deadline - new Date();
+
+  if (diff <= 0) {
+    pill.innerHTML = `
+      <div class="header-lock-pill__inner header-lock-pill--locked">
+        <span>&#128274;</span>
+        <span>${getFlag(race.flag)} Locked</span>
+      </div>`;
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+  const urgentClass = diff < 3_600_000 ? 'header-lock-pill--urgent'
+    : diff < 86_400_000 ? 'header-lock-pill--warning' : '';
+
+  const timeStr = days > 0
+    ? `${days}d ${String(hours).padStart(2, '0')}h`
+    : `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  pill.innerHTML = `
+    <div class="header-lock-pill__inner ${urgentClass}">
+      <span>&#9201;</span>
+      <span class="header-lock-pill__race">${getFlag(race.flag)} ${race.name}</span>
+      <span class="header-lock-pill__time">${timeStr}</span>
+    </div>`;
+}
+
 function startDeadlineCountdown() {
   if (_deadlineInterval) clearInterval(_deadlineInterval);
   renderLockDeadlineBanner();
-  _deadlineInterval = setInterval(renderLockDeadlineBanner, 1000);
+  renderHeaderLockPill();
+  _deadlineInterval = setInterval(() => {
+    renderLockDeadlineBanner();
+    renderHeaderLockPill();
+  }, 1000);
 }
 
 function updateTeamMeta() {
