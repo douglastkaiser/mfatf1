@@ -174,7 +174,7 @@ function renderTeamSummary() {
     const c = CONSTRUCTORS.find(c => c.id === cId);
     if (c) {
       html += `
-        <div class="performer" style="border-top:1px solid var(--border-color);padding-top:0.5rem;margin-top:0.25rem">
+        <div class="performer" data-constructor-profile="${c.id}" role="button" tabindex="0" aria-label="View ${c.name} profile" style="border-top:1px solid var(--border-color);padding-top:0.5rem;margin-top:0.25rem">
           <span class="performer__color" style="background:${c.color}"></span>
           <span class="performer__name">${c.shortName}</span>
           <span class="performer__team">Constructor</span>
@@ -220,7 +220,7 @@ function renderConstructorsList() {
     }).join(' & ');
 
     return `
-      <div class="constructor-row" style="--constructor-color:${c.color}">
+      <div class="constructor-row" data-constructor-profile="${c.id}" role="button" tabindex="0" aria-label="View ${c.name} profile" style="--constructor-color:${c.color}">
         <span class="constructor-row__name">${c.shortName}</span>
         <span class="constructor-row__drivers">${driverNames}</span>
         <span class="constructor-row__price">$${c.price}M</span>

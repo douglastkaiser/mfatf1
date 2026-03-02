@@ -147,7 +147,7 @@ function renderConstructorsTable() {
   constructors.sort((a, b) => b.totalPoints - a.totalPoints || b.price - a.price);
 
   body.innerHTML = constructors.map((c, i) => `
-    <tr>
+    <tr data-constructor-profile="${c.id}" role="button" tabindex="0" aria-label="View ${c.name} profile">
       <td><span class="pos-badge${i < 3 ? ' pos-badge--' + (i+1) : ''}">${i + 1}</span></td>
       <td>
         <div class="driver-name">
@@ -227,8 +227,10 @@ function renderStandings() {
       const color = TEAM_COLORS[constructorId] || CONSTRUCTORS.find(c => c.id === constructorId)?.color || '#555';
       const pos = parseInt(s.position, 10);
       const posClass = pos <= 3 ? ` pos-badge--${pos}` : '';
+      const constructorConfig = CONSTRUCTORS.find(c => c.id === constructorId);
+      const profileAttr = constructorConfig ? `data-constructor-profile="${constructorId}" role="button" tabindex="0" aria-label="View ${s.Constructor?.name} profile"` : '';
       return `
-        <tr>
+        <tr ${profileAttr}>
           <td><span class="pos-badge${posClass}">${s.position}</span></td>
           <td>
             <div class="driver-name">
@@ -245,7 +247,7 @@ function renderStandings() {
     wccBody.innerHTML = fallback.map((c, i) => {
       const posClass = i < 3 ? ` pos-badge--${i + 1}` : '';
       return `
-        <tr>
+        <tr data-constructor-profile="${c.id}" role="button" tabindex="0" aria-label="View ${c.name} profile">
           <td><span class="pos-badge${posClass}">${i + 1}</span></td>
           <td>
             <div class="driver-name">
@@ -266,9 +268,15 @@ function renderCalendar() {
   const now = new Date();
   let foundNext = false;
 
+  // In test mode, use the highest simulated round to determine which races are completed.
+  const testResults = loadTestResults();
+  const simulatedRounds = Object.keys(testResults).map(Number);
+  const maxSimulatedRound = simulatedRounds.length > 0 ? Math.max(...simulatedRounds) : 0;
+  const isTestMode = maxSimulatedRound > 0;
+
   container.innerHTML = RACE_CALENDAR.map(race => {
     const raceDate = new Date(race.date);
-    const isPast = raceDate < now;
+    const isPast = isTestMode ? race.round <= maxSimulatedRound : raceDate < now;
     const isNext = !isPast && !foundNext;
     if (isNext) foundNext = true;
 
@@ -286,7 +294,7 @@ function renderCalendar() {
     if (race.sprint) badges += '<span class="calendar-race__status calendar-race__status--sprint">Sprint</span>';
 
     return `
-      <div class="calendar-race ${stateClass}">
+      <div class="calendar-race ${stateClass}" data-race-profile="${race.round}" role="button" tabindex="0" aria-label="View ${race.name} details">
         <span class="calendar-race__round">R${race.round}</span>
         <span class="calendar-race__flag">${flag}</span>
         <div class="calendar-race__info">
