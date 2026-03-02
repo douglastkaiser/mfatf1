@@ -1578,6 +1578,26 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   background: linear-gradient(135deg, #f5c518 0%, #e10600 100%) !important;
 }
 
+/* ===== Chat Unread Badge ===== */
+/* Red dot shown on the Community nav buttons when a new message arrives */
+#nav-community.has-unread::after,
+#bottom-nav-community.has-unread::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-red);
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+  pointer-events: none;
+}
+
+#bottom-nav-community.has-unread {
+  position: relative;
+}
+
 /* ===== Announcement Form ===== */
 .announcement-form {
   display: flex;
@@ -2101,15 +2121,41 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   max-width: 320px;
 }
 
+/* ===== Sub-Navigation (in-page tab bar for grouped views) ===== */
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sub-nav::-webkit-scrollbar { display: none; }
+
+.sub-nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 1.1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.sub-nav-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.sub-nav-btn.active {
+  color: var(--accent-red);
+  background: rgba(225, 6, 0, 0.08);
+}
+
+.sub-view { display: none; }
+.sub-view.active { display: block; }
+
 /* ===== Nav Visual Hierarchy (P2.5) ===== */
-.nav-btn[data-nav-priority="secondary"] {
-  font-size: 0.73rem;
-  opacity: 0.6;
-}
-.nav-btn[data-nav-priority="secondary"]:hover,
-.nav-btn[data-nav-priority="secondary"].active {
-  opacity: 1;
-}
 .nav-divider {
   width: 1px;
   height: 18px;
@@ -3148,6 +3194,175 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   .chat-messages-panel--visible { display: flex; }
 
   .chat-back-btn { display: flex; }
+}
+
+/* ===== Driver Profile Modal ===== */
+
+.driver-profile-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.driver-profile__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(5px);
+}
+
+.driver-profile__panel {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-elevated);
+  --dp-team-color: #555;
+}
+
+.driver-profile__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.driver-profile__close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Hero: photo + number badge */
+.driver-profile__hero {
+  position: relative;
+  background: linear-gradient(160deg, var(--dp-team-color) 0%, color-mix(in srgb, var(--dp-team-color) 30%, #1a1d2e) 100%);
+  height: 200px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.driver-profile__photo {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.driver-profile__number-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1.25rem;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.18);
+  line-height: 1;
+  letter-spacing: -2px;
+  user-select: none;
+}
+
+/* Body content */
+.driver-profile__body {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.driver-profile__name {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem;
+  color: var(--text-primary);
+}
+
+.driver-profile__team {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+/* Stats grid */
+.driver-profile__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.dp-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dp-stat__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dp-stat__value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dp-stat__value--green { color: var(--accent-green); }
+.dp-stat__value--pos { color: var(--accent-green); }
+.dp-stat__value--neg { color: var(--accent-red); }
+
+/* Clickable driver elements — show pointer + subtle hover */
+[data-driver-profile] { cursor: pointer; }
+
+.driver-card[data-driver-profile]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.performer[data-driver-profile]:hover {
+  background: var(--bg-hover);
+}
+
+tr[data-driver-profile]:hover td {
+  background: var(--bg-hover);
+  cursor: pointer;
+}
+
+.slot--filled[data-driver-profile]:hover .slot__driver-header {
+  text-decoration: underline;
+  text-decoration-color: var(--dp-team-color, var(--text-muted));
 }
 
 /* ===== News Responsive (was the last block before chat) ===== */

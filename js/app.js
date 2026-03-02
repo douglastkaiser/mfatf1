@@ -22,32 +22,109 @@ import { initH2H, renderH2H } from './ui/h2h.js';
 import { initAdmin } from './ui/admin.js';
 import { initNews, renderNews } from './ui/news.js';
 import { initChat, destroyChat } from './ui/chat.js';
+import { initUserChatKeys, subscribeToUserChats } from './services/chat.js';
+import { initDriverProfile } from './ui/driverProfile.js';
 
 // ===== DOM References =====
 
 const authScreen = document.getElementById('auth-screen');
 const appEl = document.getElementById('app');
 
+// ===== Chat Unread Badge =====
+
+let _chatUnreadSub = null;
+let _chatLastViewedAt = null;
+
+function _showChatBadge() {
+  document.getElementById('nav-community')?.classList.add('has-unread');
+  document.getElementById('bottom-nav-community')?.classList.add('has-unread');
+}
+
+function _clearChatBadge() {
+  document.getElementById('nav-community')?.classList.remove('has-unread');
+  document.getElementById('bottom-nav-community')?.classList.remove('has-unread');
+  _chatLastViewedAt = new Date();
+}
+
+function _isChatActive() {
+  return document.getElementById('view-community')?.classList.contains('active') &&
+    document.getElementById('sub-chat')?.classList.contains('active');
+}
+
+function _startChatUnreadTracking() {
+  if (_chatUnreadSub) { _chatUnreadSub(); _chatUnreadSub = null; }
+  _chatUnreadSub = subscribeToUserChats((chats) => {
+    if (_isChatActive()) {
+      _chatLastViewedAt = new Date();
+      return;
+    }
+    const latestActivity = chats.reduce((max, chat) => {
+      const t = chat.lastMessageAt?.toDate?.();
+      return t && (!max || t > max) ? t : max;
+    }, null);
+    if (latestActivity && (!_chatLastViewedAt || latestActivity > _chatLastViewedAt)) {
+      _showChatBadge();
+    }
+  });
+}
+
 // ===== Navigation =====
 
+// Maps individual sub-view names to their parent group view
+const _SUB_VIEW_PARENT = {
+  leaderboard: 'league',
+  h2h: 'league',
+  drivers: 'f1',
+  constructors: 'f1',
+  standings: 'f1',
+  calendar: 'f1',
+  news: 'community',
+  chat: 'community',
+};
+
+// Default sub-view to show when navigating to a group
+const _GROUP_DEFAULT_SUB = {
+  league: 'leaderboard',
+  f1: 'drivers',
+  community: 'news',
+};
+
+function _activateSubView(groupName, subViewName) {
+  const groupEl = document.getElementById(`view-${groupName}`);
+  if (!groupEl) return;
+
+  groupEl.querySelectorAll('.sub-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.subview === subViewName);
+  });
+  groupEl.querySelectorAll('.sub-view').forEach(sv => {
+    sv.classList.toggle('active', sv.id === `sub-${subViewName}`);
+  });
+
+  if (subViewName === 'leaderboard') renderLeaderboard();
+  if (subViewName === 'h2h') renderH2H();
+  if (subViewName === 'news') renderNews();
+  if (subViewName === 'chat') { _clearChatBadge(); initChat(); }
+}
+
 function switchView(viewName) {
+  const parentGroup = _SUB_VIEW_PARENT[viewName];
+  const targetView = parentGroup || viewName;
+
   const navBtns = document.querySelectorAll('.nav-btn[data-view]');
   const bottomBtns = document.querySelectorAll('.bottom-nav-btn[data-view]');
-  const drawerBtns = document.querySelectorAll('.bottom-nav-drawer-item[data-view]');
   const views = document.querySelectorAll('.view');
 
-  const viewId = `view-${viewName}`;
+  navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === targetView));
+  bottomBtns.forEach(b => b.classList.toggle('active', b.dataset.view === targetView));
+  views.forEach(v => v.classList.toggle('active', v.id === `view-${targetView}`));
 
-  navBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
-  bottomBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
-  drawerBtns.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
-  views.forEach(v => v.classList.toggle('active', v.id === viewId));
+  if (parentGroup) {
+    _activateSubView(parentGroup, viewName);
+  } else if (_GROUP_DEFAULT_SUB[viewName]) {
+    _activateSubView(viewName, _GROUP_DEFAULT_SUB[viewName]);
+  }
 
   if (viewName === 'dashboard') requestAnimationFrame(() => renderPointsChart());
-  if (viewName === 'leaderboard') renderLeaderboard();
-  if (viewName === 'h2h') renderH2H();
-  if (viewName === 'news') renderNews();
-  if (viewName === 'chat') initChat();
 }
 
 function initNavigation() {
@@ -59,6 +136,17 @@ function initNavigation() {
   // Bottom nav primary buttons
   document.querySelectorAll('.bottom-nav-btn[data-view]').forEach(btn => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // Sub-nav buttons within grouped views
+  document.querySelectorAll('.sub-nav-btn[data-subview]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupEl = btn.closest('.view');
+      if (groupEl) {
+        const groupName = groupEl.id.replace('view-', '');
+        _activateSubView(groupName, btn.dataset.subview);
+      }
+    });
   });
 
   // "More" button opens the drawer
@@ -252,6 +340,8 @@ function initUserMenu() {
 
   logoutBtn.addEventListener('click', async () => {
     stopPolling();
+    if (_chatUnreadSub) { _chatUnreadSub(); _chatUnreadSub = null; }
+    _chatLastViewedAt = null;
     destroyChat();
     clearAllData();
     await logout();
@@ -272,11 +362,9 @@ function updateUserUI(profile) {
   dropdownName.textContent = name;
   dropdownEmail.textContent = profile?.email || '';
 
-  // Show chat nav for authenticated users
-  const chatNav = document.getElementById('nav-chat');
-  const bottomChatNav = document.getElementById('bottom-nav-chat');
+  // Show chat sub-nav tab for authenticated users
+  const chatNav = document.getElementById('sub-nav-chat');
   if (chatNav) chatNav.style.display = '';
-  if (bottomChatNav) bottomChatNav.style.display = '';
 
   if (profile?.role === 'admin') {
     dropdownRole.textContent = 'Commissioner';
@@ -462,6 +550,10 @@ async function showApp(user) {
   const profile = await loadCurrentProfile();
   updateUserUI(profile);
 
+  // Generate and publish chat keys automatically so the user is chat-ready
+  // without needing to open the Chat tab first.
+  initUserChatKeys(user.uid).catch(err => console.warn('[Chat] Background key init:', err));
+
   // Pull cloud data into localStorage if available
   try {
     const cloudData = await loadTeamFromCloud();
@@ -483,6 +575,7 @@ async function showApp(user) {
     initDashboard();
     initTeamUI();
     initViews();
+    initDriverProfile();
     initLeaderboard();
     initH2H();
     initNews();
@@ -504,6 +597,9 @@ async function showApp(user) {
     initTeam();
     startPolling();
   }
+
+  // Start tracking incoming chats for the unread badge (runs on every login)
+  _startChatUnreadTracking();
 }
 
 export function enterGuestMode() {
