@@ -100,16 +100,22 @@ export async function renderLeaderboard() {
         : '<span style="color:var(--text-muted)">No team</span>';
 
       const userTeamName = user.team?.teamName || '';
+      const primaryName = userTeamName || user.displayName || 'Unknown';
+      const ownerLine = userTeamName
+        ? `<div class="leaderboard-player__owner">${user.displayName || ''}</div>`
+        : '';
 
       return `
         <tr class="leaderboard-row${rowClass}" data-user-profile="${user.id}" data-user-display-name="${user.displayName || ''}" role="button" tabindex="0" aria-label="View ${user.displayName || 'player'} profile">
           <td><span class="pos-badge${posClass}">${i + 1}</span></td>
           <td>
             <div class="leaderboard-player">
-              <strong>${user.displayName || 'Unknown'}</strong>
-              ${userTeamName ? `<span class="leaderboard-team-name">${userTeamName}</span>` : ''}
-              ${roleBadge}
-              ${isMe ? '<span class="you-badge">You</span>' : ''}
+              <div class="leaderboard-player__top">
+                <strong>${primaryName}</strong>
+                ${roleBadge}
+                ${isMe ? '<span class="you-badge">You</span>' : ''}
+              </div>
+              ${ownerLine}
             </div>
           </td>
           <td class="leaderboard-team-cell">${teamDisplay}</td>
