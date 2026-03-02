@@ -113,7 +113,8 @@ export function openDriverProfile(driverId) {
   teamEl.style.color = color;
 
   // Stats grid
-  const flagEmoji = getFlag(driver.nationality);
+  // getFlag() needs a 2-letter ISO country code; nationality codes are 3-letter
+  const flagEmoji = getFlag(NATIONALITY_TO_ISO2[driver.nationality] || driver.nationality);
   const nationalityLabel = NATIONALITY_LABELS[driver.nationality] || driver.nationality;
 
   let statsHtml = `
@@ -193,4 +194,14 @@ const NATIONALITY_LABELS = {
   ESP: 'Spanish', ITA: 'Italian', FRA: 'French', DEU: 'German',
   CAN: 'Canadian', NZL: 'New Zealander', THA: 'Thai', MEX: 'Mexican',
   BRA: 'Brazilian', FIN: 'Finnish', ARG: 'Argentine',
+};
+
+// 3-letter nationality code → 2-letter ISO country code for getFlag()
+// (getFlag converts each character to a regional indicator symbol,
+//  so it only produces correct flag emojis for 2-letter codes)
+const NATIONALITY_TO_ISO2 = {
+  GBR: 'GB', NED: 'NL', MON: 'MC', AUS: 'AU',
+  ESP: 'ES', ITA: 'IT', FRA: 'FR', DEU: 'DE',
+  CAN: 'CA', NZL: 'NZ', THA: 'TH', MEX: 'MX',
+  BRA: 'BR', FIN: 'FI', ARG: 'AR',
 };
