@@ -204,7 +204,15 @@
       <section class="view" id="view-my-team">
         <div class="team-builder">
           <div class="team-builder__header">
-            <h2>Team Management</h2>
+            <div class="team-name-row" id="team-name-row">
+              <h2 id="team-name-display" class="team-name__display">My Fantasy Team</h2>
+              <button id="team-name-edit-btn" class="team-name__edit-btn" aria-label="Rename team" title="Rename team">&#9998;</button>
+            </div>
+            <div id="team-name-form" class="team-name__form" hidden style="display:none">
+              <input type="text" id="team-name-input" class="team-name__input" maxlength="50" placeholder="Name your team" autocomplete="off">
+              <button id="team-name-save" class="btn btn--primary btn--sm">Save</button>
+              <button id="team-name-cancel" class="btn btn--sm">Cancel</button>
+            </div>
             <div class="team-builder__meta">
               <div class="meta-item">
                 <span class="meta-item__label">Budget Remaining</span>

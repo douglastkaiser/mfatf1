@@ -75,6 +75,7 @@ export function loadTeam() {
     budget: 100.0,
     freeTransfers: 2,
     transfersMade: 0,
+    teamName: '',
   };
 }
 
