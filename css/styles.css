@@ -3670,7 +3670,7 @@ tr[data-driver-profile]:hover td {
 
 .cp-driver__photo-wrap {
   position: relative;
-  height: 80px;
+  height: 140px;
   background: var(--bg-tertiary);
   overflow: hidden;
 }
