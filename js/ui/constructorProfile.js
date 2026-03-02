@@ -209,9 +209,9 @@ export function openConstructorProfile(constructorId) {
   if (pointsPerRound.length > 0) {
     chartEl.style.display = '';
     const sparkEl = chartEl.querySelector('.cp-chart__spark');
-    sparkEl.innerHTML = buildSparkline(pointsPerRound, color);
-    const label = chartEl.querySelector('.cp-chart__label');
-    label.textContent = `Fantasy points over ${pointsPerRound.length} race${pointsPerRound.length > 1 ? 's' : ''}`;
+    if (sparkEl) sparkEl.innerHTML = buildSparkline(pointsPerRound, color);
+    const label = document.getElementById('constructor-profile-chart-label');
+    if (label) label.textContent = `Fantasy points over ${pointsPerRound.length} race${pointsPerRound.length > 1 ? 's' : ''}`;
   } else {
     chartEl.style.display = 'none';
   }
