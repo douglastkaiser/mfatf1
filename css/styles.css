@@ -646,6 +646,56 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
 /* ===== Team Builder ===== */
 .team-builder__header { margin-bottom: 2rem; }
 
+.team-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.team-name__display {
+  margin: 0;
+}
+
+.team-name__edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.team-name__edit-btn:hover {
+  color: var(--text-primary);
+}
+
+.team-name__form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.team-name__input {
+  flex: 1;
+  max-width: 280px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-family: var(--font);
+}
+
+.team-name__input:focus {
+  outline: none;
+  border-color: var(--accent-red);
+}
+
 .team-builder__meta {
   display: flex;
   gap: 2.5rem;
@@ -1529,6 +1579,12 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   font-size: 0.78rem;
   color: var(--text-secondary);
   max-width: 200px;
+}
+
+.leaderboard-team-name {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .you-badge {

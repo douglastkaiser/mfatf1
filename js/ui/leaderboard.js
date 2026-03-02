@@ -99,12 +99,15 @@ export async function renderLeaderboard() {
         ? `${teamDrivers}${teamConstructors ? ' + ' + teamConstructors : ''}`
         : '<span style="color:var(--text-muted)">No team</span>';
 
+      const userTeamName = user.team?.teamName || '';
+
       return `
         <tr class="leaderboard-row${rowClass}" data-user-profile="${user.id}" data-user-display-name="${user.displayName || ''}" role="button" tabindex="0" aria-label="View ${user.displayName || 'player'} profile">
           <td><span class="pos-badge${posClass}">${i + 1}</span></td>
           <td>
             <div class="leaderboard-player">
               <strong>${user.displayName || 'Unknown'}</strong>
+              ${userTeamName ? `<span class="leaderboard-team-name">${userTeamName}</span>` : ''}
               ${roleBadge}
               ${isMe ? '<span class="you-badge">You</span>' : ''}
             </div>
