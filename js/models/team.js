@@ -287,6 +287,28 @@ export function getBudget() {
 }
 
 /**
+ * Get the team name.
+ * @returns {string}
+ */
+export function getTeamName() {
+  if (!teamState) initTeam();
+  return teamState.teamName || '';
+}
+
+/**
+ * Set the team name.
+ * @param {string} name
+ * @returns {{ success: boolean }}
+ */
+export function setTeamName(name) {
+  if (!teamState) initTeam();
+  teamState.teamName = String(name).trim().slice(0, 50);
+  saveTeam(teamState);
+  emit(HookEvents.TEAM_NAME_CHANGED, teamState.teamName);
+  return { success: true };
+}
+
+/**
  * Check if team is complete (5 drivers + 2 constructors).
  */
 export function isTeamComplete() {

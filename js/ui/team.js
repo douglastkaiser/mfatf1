@@ -7,7 +7,7 @@ import { DRIVERS, CONSTRUCTORS, TEAM_COLORS } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
 import {
   getTeam, addDriver, removeDriver, setConstructor, removeConstructor,
-  activateBoost, deactivateBoost, getBoosts,
+  activateBoost, deactivateBoost, getBoosts, getTeamName, setTeamName,
 } from '../models/team.js';
 import { loadScoringHistory } from '../services/storage.js';
 import { showToast } from './toast.js';
@@ -24,6 +24,7 @@ export function initTeamUI() {
   setupBoostTargetModal();
   setupChipInfo();
   renderGuestNotice();
+  initTeamNameUI();
 
   on(HookEvents.TEAM_UPDATED, () => {
     renderSlots();
@@ -345,6 +346,53 @@ function renderGuestNotice() {
   document.getElementById('guest-notice-signin').addEventListener('click', () => {
     document.getElementById('guest-signin-btn')?.click();
   });
+}
+
+// ===== Team Name =====
+
+function initTeamNameUI() {
+  renderTeamNameDisplay();
+
+  document.getElementById('team-name-edit-btn').addEventListener('click', () => {
+    document.getElementById('team-name-input').value = getTeamName();
+    document.getElementById('team-name-row').style.display = 'none';
+    const form = document.getElementById('team-name-form');
+    form.removeAttribute('hidden');
+    form.style.display = 'flex';
+    const input = document.getElementById('team-name-input');
+    input.focus();
+    input.select();
+  });
+
+  document.getElementById('team-name-save').addEventListener('click', saveTeamNameFromUI);
+
+  document.getElementById('team-name-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveTeamNameFromUI();
+    if (e.key === 'Escape') cancelTeamNameEdit();
+  });
+
+  document.getElementById('team-name-cancel').addEventListener('click', cancelTeamNameEdit);
+
+  on(HookEvents.TEAM_NAME_CHANGED, renderTeamNameDisplay);
+}
+
+function renderTeamNameDisplay() {
+  const el = document.getElementById('team-name-display');
+  if (el) el.textContent = getTeamName() || 'My Fantasy Team';
+}
+
+function saveTeamNameFromUI() {
+  const input = document.getElementById('team-name-input');
+  setTeamName(input.value);
+  cancelTeamNameEdit();
+  showToast('Team name saved.', 'success');
+}
+
+function cancelTeamNameEdit() {
+  document.getElementById('team-name-row').style.display = '';
+  const form = document.getElementById('team-name-form');
+  form.setAttribute('hidden', '');
+  form.style.display = 'none';
 }
 
 // ===== Boost Target Selection Modal =====
