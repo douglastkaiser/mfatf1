@@ -100,7 +100,7 @@ export async function renderLeaderboard() {
         : '<span style="color:var(--text-muted)">No team</span>';
 
       return `
-        <tr class="leaderboard-row${rowClass}">
+        <tr class="leaderboard-row${rowClass}" data-user-profile="${user.id}" data-user-display-name="${user.displayName || ''}" role="button" tabindex="0" aria-label="View ${user.displayName || 'player'} profile">
           <td><span class="pos-badge${posClass}">${i + 1}</span></td>
           <td>
             <div class="leaderboard-player">

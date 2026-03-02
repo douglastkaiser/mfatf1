@@ -832,7 +832,86 @@
           <h2 class="driver-profile__name" id="driver-profile-name"></h2>
           <div class="driver-profile__team" id="driver-profile-team"></div>
           <div class="driver-profile__stats" id="driver-profile-stats"></div>
+          <div class="dp-chart" id="driver-profile-chart" style="display:none">
+            <div class="dp-chart__header">
+              <span class="dp-chart__title">Points per race</span>
+              <span class="dp-chart__label" id="driver-profile-chart-label"></span>
+            </div>
+            <div class="dp-chart__spark" id="driver-profile-chart-spark"></div>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Constructor Profile Modal -->
+    <div class="constructor-profile-modal" id="constructor-profile-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="constructor-profile-name">
+      <div class="constructor-profile__backdrop"></div>
+      <div class="constructor-profile__panel" id="constructor-profile-panel">
+        <button type="button" class="driver-profile__close" id="constructor-profile-close" aria-label="Close constructor profile">&times;</button>
+        <div class="constructor-profile__hero">
+          <div class="constructor-profile__name-wrap">
+            <h2 class="constructor-profile__name" id="constructor-profile-name"></h2>
+            <div class="constructor-profile__short" id="constructor-profile-short"></div>
+          </div>
+        </div>
+        <div class="constructor-profile__body">
+          <div class="constructor-profile__drivers" id="constructor-profile-drivers"></div>
+          <div class="driver-profile__stats" id="constructor-profile-stats"></div>
+          <div class="cp-chart" id="constructor-profile-chart" style="display:none">
+            <div class="dp-chart__header">
+              <span class="dp-chart__title">Fantasy points per race</span>
+              <span class="dp-chart__label" id="constructor-profile-chart-label"></span>
+            </div>
+            <div class="cp-chart__spark"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div class="user-profile-modal" id="user-profile-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="user-profile-display-name">
+      <div class="user-profile__backdrop"></div>
+      <div class="user-profile__panel" id="user-profile-panel">
+        <button type="button" class="driver-profile__close" id="user-profile-close" aria-label="Close user profile">&times;</button>
+        <div class="user-profile__hero">
+          <div class="user-profile__avatar" id="user-profile-avatar"></div>
+          <div class="user-profile__hero-info">
+            <h2 class="user-profile__name" id="user-profile-display-name"></h2>
+            <span class="role-badge role-badge--admin" id="user-profile-role" style="display:none"></span>
+          </div>
+        </div>
+        <div class="user-profile__body">
+          <div class="user-profile__stats" id="user-profile-stats"></div>
+          <div class="user-profile__team-section">
+            <div class="user-profile__team" id="user-profile-team"></div>
+          </div>
+          <div class="up-chart" id="user-profile-chart" style="display:none">
+            <div class="dp-chart__header">
+              <span class="dp-chart__title">Points over time</span>
+              <span class="up-chart__label dp-chart__label"></span>
+            </div>
+            <div class="up-chart__spark"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Race Profile Modal -->
+    <div class="race-profile-modal" id="race-profile-modal" hidden style="display:none" role="dialog" aria-modal="true" aria-labelledby="race-profile-name">
+      <div class="race-profile__backdrop"></div>
+      <div class="race-profile__panel" id="race-profile-panel">
+        <button type="button" class="driver-profile__close" id="race-profile-close" aria-label="Close race profile">&times;</button>
+        <div class="race-profile__hero">
+          <span class="race-profile__flag" id="race-profile-flag"></span>
+          <div class="race-profile__hero-info">
+            <div class="race-profile__round" id="race-profile-round"></div>
+            <h2 class="race-profile__name" id="race-profile-name"></h2>
+            <div class="race-profile__circuit" id="race-profile-circuit"></div>
+            <div class="race-profile__date" id="race-profile-date"></div>
+            <div class="race-profile__badges" id="race-profile-badges"></div>
+          </div>
+        </div>
+        <div class="race-profile__body" id="race-profile-body"></div>
       </div>
     </div>
 

@@ -174,6 +174,26 @@ export function openDriverProfile(driverId) {
 
   document.getElementById('driver-profile-stats').innerHTML = statsHtml;
 
+  // Points over time sparkline
+  const perRacePts = [];
+  for (const round of sortedRounds) {
+    const s = history[round]?.driverScores?.[driverId];
+    if (s !== undefined) {
+      const v = typeof s === 'object' ? (s.total || 0) : s;
+      perRacePts.push(v);
+    }
+  }
+  const chartEl = document.getElementById('driver-profile-chart');
+  const sparkEl = document.getElementById('driver-profile-chart-spark');
+  const labelEl = document.getElementById('driver-profile-chart-label');
+  if (perRacePts.length > 0 && chartEl && sparkEl) {
+    chartEl.style.display = '';
+    if (labelEl) labelEl.textContent = `${perRacePts.length} race${perRacePts.length > 1 ? 's' : ''}`;
+    sparkEl.innerHTML = _buildDriverSparkline(perRacePts, color);
+  } else if (chartEl) {
+    chartEl.style.display = 'none';
+  }
+
   // Show modal
   modal.removeAttribute('hidden');
   modal.style.display = 'flex';
@@ -186,6 +206,25 @@ export function closeDriverProfile() {
     modal.setAttribute('hidden', '');
     modal.style.display = 'none';
   }
+}
+
+// Per-race points bar sparkline
+function _buildDriverSparkline(values, color) {
+  const posVals = values.map(v => Math.max(0, v));
+  const max = Math.max(...posVals, 1);
+  const count = posVals.length;
+  const W = 100;
+  const H = 48;
+  const barW = Math.max(2, (W / count) - 1.5);
+
+  const bars = posVals.map((v, i) => {
+    const h = Math.round((v / max) * H);
+    const x = i * (W / count);
+    const y = H - h;
+    return `<rect x="${x + 0.75}" y="${y}" width="${barW}" height="${h}" rx="1" fill="${color}" opacity="${h === 0 ? 0.2 : 0.85}"/>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 100 48" preserveAspectRatio="none" aria-hidden="true" style="width:100%;height:100%;display:block">${bars}</svg>`;
 }
 
 // Nationality code → readable label
