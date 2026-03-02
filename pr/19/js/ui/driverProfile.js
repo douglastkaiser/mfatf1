@@ -5,56 +5,17 @@
 import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, getFlag } from '../config.js';
 import { loadScoringHistory, loadCachedResults, loadTestResults } from '../services/storage.js';
 
-// Wikipedia page titles for each driver (used to fetch their headshot)
-const WIKI_TITLES = {
-  norris:         'Lando_Norris',
-  max_verstappen: 'Max_Verstappen',
-  russell:        'George_Russell_(racing_driver)',
-  leclerc:        'Charles_Leclerc',
-  piastri:        'Oscar_Piastri',
-  hamilton:       'Lewis_Hamilton',
-  antonelli:      'Andrea_Kimi_Antonelli',
-  sainz:          'Carlos_Sainz_Jr.',
-  alonso:         'Fernando_Alonso',
-  gasly:          'Pierre_Gasly',
-  hadjar:         'Isack_Hadjar',
-  lawson:         'Liam_Lawson_(racing_driver)',
-  albon:          'Alexander_Albon',
-  ocon:           'Esteban_Ocon',
-  hulkenberg:     'Nico_Hülkenberg',
-  stroll:         'Lance_Stroll',
-  bearman:        'Oliver_Bearman',
-  colapinto:      'Franco_Colapinto',
-  perez:          'Sergio_Pérez',
-  bortoleto:      'Gabriel_Bortoleto',
-  bottas:         'Valtteri_Bottas',
-  lindblad:       'Arvid_Lindblad',
-};
-
-// In-memory cache so each driver is only fetched once per session
-const _photoCache = {};
-
-async function fetchDriverPhoto(driverId) {
-  if (_photoCache[driverId] !== undefined) return _photoCache[driverId];
-
-  const title = WIKI_TITLES[driverId];
-  if (!title) { _photoCache[driverId] = null; return null; }
-
-  try {
-    const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
-    );
-    if (!res.ok) { _photoCache[driverId] = null; return null; }
-    const data = await res.json();
-    const raw = data.thumbnail?.source || null;
-    // Request a 320 px wide version — Wikimedia serves any width on demand
-    const url = raw ? raw.replace(/\/(\d+)px-([^/]+)$/, '/320px-$2') : null;
-    _photoCache[driverId] = url;
-    return url;
-  } catch {
-    _photoCache[driverId] = null;
-    return null;
-  }
+/**
+ * Build the F1 media CDN headshot URL for a driver.
+ * The d_driver_fallback_image.png Cloudinary prefix ensures the request
+ * always returns an image (real headshot or a fallback silhouette).
+ */
+function getDriverHeadshotUrl(driver) {
+  const first3 = driver.firstName.slice(0, 3).toUpperCase();
+  const last3 = driver.lastName.slice(0, 3).toUpperCase();
+  const code = `${first3}${last3}01`;
+  const firstLetter = driver.firstName.charAt(0).toUpperCase();
+  return `https://media.formula1.com/d_driver_fallback_image.png/content/dam/fom-website/drivers/${firstLetter}/${code}_${driver.firstName}_${driver.lastName}/${code.toLowerCase()}.png.transform/2col/image.png`;
 }
 
 export function initDriverProfile() {
@@ -119,7 +80,7 @@ export function openDriverProfile(driverId) {
   const driverStandings = cached.driverStandings || [];
   const standing = driverStandings.find(s => s.Driver?.driverId === driverId);
 
-  // Last race finish position from test results
+  // Last race finish position
   const testResults = loadTestResults();
   const testRounds = Object.keys(testResults).sort((a, b) => Number(a) - Number(b));
   let lastRaceFinish = null;
@@ -133,29 +94,13 @@ export function openDriverProfile(driverId) {
   const panel = document.getElementById('driver-profile-panel');
   panel.style.setProperty('--dp-team-color', color);
 
-  // Photo: reset to invisible; preload via Image() then fade in
+  // Photo — F1 CDN with Cloudinary fallback ensures something always loads
   const photo = document.getElementById('driver-profile-photo');
-  photo.src = '';
-  photo.alt = '';
   photo.style.opacity = '0';
-  // Tag the element with the current driver so stale callbacks can self-cancel
-  photo.dataset.forDriver = driverId;
-
-  fetchDriverPhoto(driverId).then(url => {
-    // Bail out if a different profile is now showing, or modal was closed
-    if (modal.hidden || photo.dataset.forDriver !== driverId || !url) return;
-
-    // Preload via a detached Image so the real <img> src switches without flash
-    const tmp = new Image();
-    tmp.onload = () => {
-      if (photo.dataset.forDriver !== driverId) return; // stale
-      photo.src = url;
-      photo.alt = `${driver.firstName} ${driver.lastName}`;
-      // rAF ensures the browser has painted before we start the transition
-      requestAnimationFrame(() => { photo.style.opacity = '1'; });
-    };
-    tmp.src = url;
-  });
+  photo.onload = () => { photo.style.opacity = '1'; };
+  photo.onerror = () => { photo.style.opacity = '0'; };
+  photo.src = getDriverHeadshotUrl(driver);
+  photo.alt = `${driver.firstName} ${driver.lastName}`;
 
   // Number overlay
   document.getElementById('driver-profile-number').textContent = driver.number;
