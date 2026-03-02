@@ -629,5 +629,6 @@ function buildAndCacheStandings(testResults) {
 
   emit(HookEvents.DRIVER_STANDINGS_UPDATED, driverStandings);
   emit(HookEvents.CONSTRUCTOR_STANDINGS_UPDATED, constructorStandings);
+  emit(HookEvents.RACE_SCHEDULE_UPDATED);
   emit(HookEvents.DATA_SYNC_COMPLETE);
 }
