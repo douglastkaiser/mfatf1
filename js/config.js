@@ -122,3 +122,21 @@ export function getFlag(code) {
     String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
   );
 }
+
+// Returns the qualifying deadline for the next upcoming race.
+// Qualifying is assumed to be 1 day before the race date at 14:00 UTC.
+// Returns { race, deadline } or null if the season is over.
+export function getNextQualiDeadline() {
+  const now = new Date();
+  const next = RACE_CALENDAR.find(r => {
+    const d = new Date(r.date + 'T14:00:00Z'); // Race day ~14:00 UTC
+    const quali = new Date(d);
+    quali.setUTCDate(quali.getUTCDate() - 1); // Qualifying: 1 day before
+    return quali > now;
+  });
+  if (!next) return null;
+  const raceDate = new Date(next.date + 'T14:00:00Z');
+  const deadline = new Date(raceDate);
+  deadline.setUTCDate(deadline.getUTCDate() - 1);
+  return { race: next, deadline };
+}

@@ -3,7 +3,7 @@
 // picker modal, boost activation with driver target selection.
 // Supports 5 drivers + 2 constructors per the official F1 Fantasy format.
 
-import { DRIVERS, CONSTRUCTORS, TEAM_COLORS } from '../config.js';
+import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, getNextQualiDeadline, getFlag } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
 import {
   getTeam, addDriver, removeDriver, setConstructor, removeConstructor,
@@ -16,6 +16,7 @@ let pickerMode = null; // 'driver' | 'constructor'
 let pickerSlot = null;
 let pendingBoostType = null; // when waiting for driver target selection
 let lastRemoved = null; // { id, slot, type } for undo on remove
+let _deadlineInterval = null;
 
 export function initTeamUI() {
   renderSlots();
@@ -25,6 +26,7 @@ export function initTeamUI() {
   setupChipInfo();
   renderGuestNotice();
   initTeamNameUI();
+  startDeadlineCountdown();
 
   on(HookEvents.TEAM_UPDATED, () => {
     renderSlots();
@@ -42,6 +44,70 @@ export function initTeamUI() {
     renderSlots();
     updateTeamMeta();
   });
+}
+
+// ===== Team Lock Deadline Countdown =====
+
+function renderLockDeadlineBanner() {
+  const container = document.getElementById('team-lock-deadline');
+  if (!container) return;
+
+  const info = getNextQualiDeadline();
+  if (!info) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const { race, deadline } = info;
+  const now = new Date();
+  const diff = deadline - now;
+
+  if (diff <= 0) {
+    container.innerHTML = `
+      <div class="lock-deadline lock-deadline--locked">
+        <span class="lock-deadline__icon">&#128274;</span>
+        <div class="lock-deadline__text">
+          <strong>Team Locked</strong>
+          <span>${getFlag(race.flag)} ${race.name} — changes locked for Qualies</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+  const urgentClass = diff < 3_600_000 ? 'lock-deadline--urgent'
+    : diff < 86_400_000 ? 'lock-deadline--warning' : '';
+
+  const daysHtml = days > 0
+    ? `<div class="lock-unit"><span class="lock-unit__val">${days}</span><span class="lock-unit__label">d</span></div>`
+    : '';
+
+  container.innerHTML = `
+    <div class="lock-deadline ${urgentClass}">
+      <span class="lock-deadline__icon">&#9201;</span>
+      <div class="lock-deadline__text">
+        <strong>Team Lock Deadline</strong>
+        <span>${getFlag(race.flag)} ${race.name} — lock before Qualies</span>
+      </div>
+      <div class="lock-deadline__countdown">
+        ${daysHtml}
+        <div class="lock-unit"><span class="lock-unit__val">${String(hours).padStart(2, '0')}</span><span class="lock-unit__label">h</span></div>
+        <div class="lock-unit"><span class="lock-unit__val">${String(mins).padStart(2, '0')}</span><span class="lock-unit__label">m</span></div>
+        <div class="lock-unit"><span class="lock-unit__val">${String(secs).padStart(2, '0')}</span><span class="lock-unit__label">s</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function startDeadlineCountdown() {
+  if (_deadlineInterval) clearInterval(_deadlineInterval);
+  renderLockDeadlineBanner();
+  _deadlineInterval = setInterval(renderLockDeadlineBanner, 1000);
 }
 
 function updateTeamMeta() {
