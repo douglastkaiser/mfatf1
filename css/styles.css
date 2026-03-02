@@ -153,19 +153,39 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   flex-shrink: 0;
 }
 
-.budget-pill {
+.header-lock-pill__inner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--bg-elevated);
-  padding: 0.4rem 1rem;
+  padding: 0.4rem 0.85rem;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   border: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
-.budget-pill__label { color: var(--text-muted); font-weight: 500; }
-.budget-pill__value { color: var(--accent-green); font-weight: 800; font-size: 0.85rem; }
+.header-lock-pill__race {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.header-lock-pill__time {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-lock-pill--warning .header-lock-pill__time { color: var(--accent-yellow); }
+.header-lock-pill--warning { border-color: rgba(245, 197, 24, 0.4); }
+
+.header-lock-pill--urgent .header-lock-pill__time { color: var(--accent-red, #e8002d); }
+.header-lock-pill--urgent { border-color: rgba(232, 0, 45, 0.4); animation: lock-pulse 1.4s ease-in-out infinite; }
+
+.header-lock-pill--locked { border-color: var(--border-color); color: var(--text-muted); }
+
+@media (max-width: 768px) {
+  .header-lock-pill__race { display: none; }
+}
 
 .update-indicator {
   display: flex;
@@ -2103,6 +2123,92 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
 }
 .guest-notice__btn:hover { background: var(--accent-yellow-dim); }
 
+/* ===== Team Lock Deadline Countdown ===== */
+.lock-deadline {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(39,244,210,0.07);
+  border: 1px solid rgba(39,244,210,0.25);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+.lock-deadline--warning {
+  background: rgba(245,197,24,0.08);
+  border-color: rgba(245,197,24,0.35);
+}
+.lock-deadline--urgent {
+  background: rgba(232,0,45,0.08);
+  border-color: rgba(232,0,45,0.35);
+  animation: lock-pulse 1.4s ease-in-out infinite;
+}
+.lock-deadline--locked {
+  background: rgba(100,100,100,0.1);
+  border-color: var(--border-color);
+}
+@keyframes lock-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.lock-deadline__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+.lock-deadline__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.lock-deadline__text strong {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+.lock-deadline__text span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lock-deadline__countdown {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.lock-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.5rem;
+  min-width: 40px;
+}
+.lock-unit__val {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lock-deadline--warning .lock-unit__val { color: var(--accent-yellow); }
+.lock-deadline--urgent .lock-unit__val { color: var(--accent-red, #e8002d); }
+.lock-unit__label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
 /* ===== Picker Budget Indicator (P1.1) ===== */
 .picker-budget-bar {
   display: flex;
@@ -2415,7 +2521,6 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
 @media (max-width: 768px) {
   .bottom-nav { display: flex; }
   .top-bar__nav { display: none; }
-  .budget-pill { display: none; }
   .main-content { padding-bottom: calc(68px + 1rem); }
 }
 
@@ -3565,7 +3670,7 @@ tr[data-driver-profile]:hover td {
 
 .cp-driver__photo-wrap {
   position: relative;
-  height: 80px;
+  height: 140px;
   background: var(--bg-tertiary);
   overflow: hidden;
 }

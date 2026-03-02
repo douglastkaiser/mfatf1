@@ -37,7 +37,6 @@ export function initDashboard() {
     renderHookLog();
   });
   on(HookEvents.DATA_SYNC_ERROR, () => updateSyncIndicator('error'));
-  on(HookEvents.TEAM_BUDGET_CHANGED, updateBudgetDisplay);
 
   // Log team events for activity feed
   for (const event of Object.values(HookEvents)) {
@@ -605,7 +604,3 @@ function setupForceSync() {
   }
 }
 
-function updateBudgetDisplay(budget) {
-  const el = document.querySelector('.budget-pill__value');
-  if (el) el.textContent = `$${budget.toFixed(1)}M`;
-}
