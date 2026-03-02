@@ -140,22 +140,29 @@ function switchView(viewName) {
   if (viewName !== _currentViewName) {
     _navHistory.push(_currentViewName);
     _currentViewName = viewName;
+    history.pushState({ appView: viewName }, '');
   }
   _doSwitchView(viewName);
   _updateBackBtn();
 }
 
 function goBack() {
-  if (_navHistory.length === 0) return;
-  const prev = _navHistory.pop();
-  _currentViewName = prev;
-  _doSwitchView(prev);
-  _updateBackBtn();
+  // Delegate to browser history — popstate handler does the actual view switch
+  if (_navHistory.length > 0) history.back();
 }
 
 function initNavigation() {
-  // Back button
+  // In-app back button → browser back (keeps history in sync)
   document.getElementById('back-btn')?.addEventListener('click', goBack);
+
+  // Browser back / Alt+← / mouse back button all fire popstate
+  window.addEventListener('popstate', () => {
+    if (_navHistory.length === 0) return; // let browser navigate away naturally
+    const prev = _navHistory.pop();
+    _currentViewName = prev;
+    _doSwitchView(prev);
+    _updateBackBtn();
+  });
 
   // Top nav buttons
   document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
