@@ -159,7 +159,7 @@ function renderTeamSummary() {
     const color = TEAM_COLORS[driver.team] || 'var(--border-color)';
     const constructor = CONSTRUCTORS.find(c => c.id === driver.team);
     html += `
-      <div class="performer">
+      <div class="performer" data-driver-profile="${driver.id}" role="button" tabindex="0" aria-label="View ${driver.firstName} ${driver.lastName} profile">
         <span class="performer__color" style="background:${color}"></span>
         <span class="performer__name">${driver.firstName} ${driver.lastName}</span>
         <span class="performer__team">${constructor?.shortName || ''}</span>
@@ -196,7 +196,7 @@ function renderDriverMarket() {
     const color = TEAM_COLORS[d.team] || '#555';
     const constructor = CONSTRUCTORS.find(c => c.id === d.team);
     return `
-      <div class="driver-card" style="--driver-team-color:${color}">
+      <div class="driver-card" style="--driver-team-color:${color}" data-driver-profile="${d.id}" role="button" tabindex="0" aria-label="View ${d.firstName} ${d.lastName} profile">
         <span class="driver-card__number">${d.number}</span>
         <div class="driver-card__name">${d.lastName}</div>
         <div class="driver-card__team">${constructor?.shortName || d.team}</div>

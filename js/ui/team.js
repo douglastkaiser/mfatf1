@@ -122,7 +122,8 @@ function renderSlots() {
       : '';
 
     return `
-      <div class="slot slot--filled" data-slot="${i}" data-type="driver" style="border-color:${color}">
+      <div class="slot slot--filled" data-slot="${i}" data-type="driver" style="border-color:${color}"
+           data-driver-profile="${driverId}" aria-label="View ${driver.firstName} ${driver.lastName} profile">
         <div class="slot__driver">
           <div class="slot__driver-header">
             <span class="slot__driver-name">${driver.firstName} ${driver.lastName}</span>
@@ -134,7 +135,7 @@ function renderSlots() {
             <span class="slot__driver-points">${totalPts} pts</span>
             ${lastPtsHtml}
           </div>
-          <button class="slot__remove" data-remove-type="driver" data-remove-slot="${i}"
+          <button class="slot__remove" data-remove-type="driver" data-remove-slot="${i}" data-no-profile
                   aria-label="Remove ${driver.firstName} ${driver.lastName}">Remove</button>
         </div>
       </div>

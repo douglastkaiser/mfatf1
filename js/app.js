@@ -23,6 +23,7 @@ import { initAdmin } from './ui/admin.js';
 import { initNews, renderNews } from './ui/news.js';
 import { initChat, destroyChat } from './ui/chat.js';
 import { initUserChatKeys, subscribeToUserChats } from './services/chat.js';
+import { initDriverProfile } from './ui/driverProfile.js';
 
 // ===== DOM References =====
 
@@ -574,6 +575,7 @@ async function showApp(user) {
     initDashboard();
     initTeamUI();
     initViews();
+    initDriverProfile();
     initLeaderboard();
     initH2H();
     initNews();
