@@ -24,6 +24,9 @@ import { initNews, renderNews } from './ui/news.js';
 import { initChat, destroyChat } from './ui/chat.js';
 import { initUserChatKeys, subscribeToUserChats } from './services/chat.js';
 import { initDriverProfile } from './ui/driverProfile.js';
+import { initConstructorProfile } from './ui/constructorProfile.js';
+import { initUserProfile } from './ui/userProfile.js';
+import { initRaceProfile } from './ui/raceProfile.js';
 
 // ===== DOM References =====
 
@@ -606,6 +609,9 @@ async function showApp(user) {
     initTeamUI();
     initViews();
     initDriverProfile();
+    initConstructorProfile();
+    initUserProfile();
+    initRaceProfile();
     initLeaderboard();
     initH2H();
     initNews();
