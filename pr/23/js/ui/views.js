@@ -268,9 +268,15 @@ function renderCalendar() {
   const now = new Date();
   let foundNext = false;
 
+  // In test mode, use the highest simulated round to determine which races are completed.
+  const testResults = loadTestResults();
+  const simulatedRounds = Object.keys(testResults).map(Number);
+  const maxSimulatedRound = simulatedRounds.length > 0 ? Math.max(...simulatedRounds) : 0;
+  const isTestMode = maxSimulatedRound > 0;
+
   container.innerHTML = RACE_CALENDAR.map(race => {
     const raceDate = new Date(race.date);
-    const isPast = raceDate < now;
+    const isPast = isTestMode ? race.round <= maxSimulatedRound : raceDate < now;
     const isNext = !isPast && !foundNext;
     if (isNext) foundNext = true;
 

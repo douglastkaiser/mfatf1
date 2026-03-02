@@ -79,7 +79,20 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   z-index: 100;
 }
 
-.top-bar__left { flex-shrink: 0; }
+.top-bar__left { flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+  line-height: 1;
+}
+.back-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
 
 .logo { display: flex; align-items: baseline; gap: 8px; }
 
