@@ -10,5 +10,5 @@ export const FIREBASE_CONFIG = {
   measurementId: 'G-QWC5BTGB49',
 };
 
-// The email address that gets admin/commissioner privileges.
-export const ADMIN_EMAIL = 'douglastkaiser@gmail.com';
+// Email addresses that get admin/commissioner privileges.
+export const ADMIN_EMAILS = ['douglastkaiser@gmail.com', 'gregory.glance@gmail.com'];

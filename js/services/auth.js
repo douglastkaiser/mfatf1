@@ -29,7 +29,7 @@ import {
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js';
 
-import { FIREBASE_CONFIG, ADMIN_EMAIL } from './firebase-config.js';
+import { FIREBASE_CONFIG, ADMIN_EMAILS } from './firebase-config.js';
 
 let app = null;
 let auth = null;
@@ -82,7 +82,7 @@ export async function register(email, password, displayName) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(cred.user, { displayName });
 
-  const role = email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim()
+  const role = ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(email.toLowerCase().trim())
     ? 'admin' : 'member';
 
   await setDoc(doc(db, 'users', cred.user.uid), {
@@ -131,7 +131,7 @@ export async function loginWithGoogle() {
   if (!profileDoc.exists()) {
     // First time Google sign-in -- create profile
     const email = (user.email || '').toLowerCase().trim();
-    const role = email === ADMIN_EMAIL.toLowerCase().trim() ? 'admin' : 'member';
+    const role = ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(email) ? 'admin' : 'member';
 
     await setDoc(doc(db, 'users', user.uid), {
       displayName: user.displayName || email.split('@')[0],
