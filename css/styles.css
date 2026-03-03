@@ -2689,6 +2689,85 @@ h3 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-b
   color: var(--text-muted);
 }
 
+/* ===== Provisional Projected Points (post-qualifying, pre-race) ===== */
+.slot__provisional {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.1);
+  border: 1px dashed rgba(255, 149, 0, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 3px 7px;
+  margin-top: 4px;
+}
+
+.slot__provisional__icon {
+  font-style: normal;
+  opacity: 0.7;
+}
+
+.slot__provisional__pts {
+  font-weight: 700;
+  font-style: normal;
+}
+
+.slot__provisional__pos {
+  opacity: 0.75;
+  font-size: 0.65rem;
+}
+
+.slot__provisional__badge {
+  margin-left: auto;
+  font-size: 0.58rem;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.18);
+  border-radius: 2px;
+  padding: 1px 3px;
+}
+
+/* Provisional banner above driver/constructor slots */
+.provisional-race-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 149, 0, 0.08);
+  border: 1px solid rgba(255, 149, 0, 0.3);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.provisional-race-banner[hidden] { display: none; }
+
+.provisional-banner__icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.provisional-race-banner strong {
+  display: block;
+  color: #ff9500;
+  margin-bottom: 2px;
+}
+
+/* Team meta provisional projection label */
+.meta-provisional {
+  font-size: 0.7rem;
+  font-style: italic;
+  font-weight: 600;
+  color: #ff9500;
+  margin-left: 4px;
+}
+
 /* ===== News View ===== */
 .news-view {
   max-width: 900px;
