@@ -3,13 +3,14 @@
 // picker modal, boost activation with driver target selection.
 // Supports 5 drivers + 2 constructors per the official F1 Fantasy format.
 
-import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, getNextQualiDeadline, getFlag } from '../config.js';
+import { DRIVERS, CONSTRUCTORS, TEAM_COLORS, SCORING, getNextQualiDeadline, getFlag } from '../config.js';
 import { on, HookEvents } from '../services/hooks.js';
 import {
   getTeam, addDriver, removeDriver, setConstructor, removeConstructor,
   activateBoost, deactivateBoost, getBoosts, getTeamName, setTeamName,
 } from '../models/team.js';
-import { loadScoringHistory } from '../services/storage.js';
+import { loadScoringHistory, loadCachedResults } from '../services/storage.js';
+import { calculateConstructorQualifyingBonus } from '../scoring/engine.js';
 import { showToast } from './toast.js';
 
 let pickerMode = null; // 'driver' | 'constructor'
@@ -38,11 +39,18 @@ export function initTeamUI() {
   on(HookEvents.DATA_SYNC_COMPLETE, () => {
     renderSlots();
     updateTeamMeta();
+    renderProvisionalBanner();
   });
 
   on(HookEvents.FANTASY_SCORES_CALCULATED, () => {
     renderSlots();
     updateTeamMeta();
+  });
+
+  on(HookEvents.RACE_QUALIFYING_RECEIVED, () => {
+    renderSlots();
+    updateTeamMeta();
+    renderProvisionalBanner();
   });
 }
 
@@ -156,6 +164,87 @@ function startDeadlineCountdown() {
   }, 1000);
 }
 
+// ===== Provisional Points (Qualifying Complete, Race Pending) =====
+
+/**
+ * Returns projected points based on qualifying positions if qualifying has
+ * completed but the race has not yet happened. Returns null otherwise.
+ */
+function getProvisionalData() {
+  const cached = loadCachedResults();
+  const { qualifying = [], raceResults = [] } = cached;
+
+  if (qualifying.length === 0) return null;
+
+  const latestQualiRound = Math.max(...qualifying.map(q => Number(q.round)));
+  const hasRaceResult = raceResults.some(r => Number(r.round) === latestQualiRound);
+
+  if (hasRaceResult) return null;
+
+  const qualiRace = qualifying.find(q => Number(q.round) === latestQualiRound);
+  if (!qualiRace) return null;
+
+  const qualiResults = qualiRace.QualifyingResults || [];
+  if (qualiResults.length === 0) return null;
+
+  // Project each driver's points as if they finish where they qualified
+  const driverProvisional = {};
+  for (const result of qualiResults) {
+    const driverId = result.Driver?.driverId;
+    if (!driverId) continue;
+    const position = parseInt(result.position, 10);
+    driverProvisional[driverId] = {
+      points: SCORING.RACE_FINISH[position] || 0,
+      position,
+    };
+  }
+
+  // Project constructor points: race finish + qualifying bonus
+  const constructorProvisional = {};
+  for (const constructor of CONSTRUCTORS) {
+    let racePoints = 0;
+    for (const driverId of constructor.drivers) {
+      if (driverProvisional[driverId]) {
+        racePoints += driverProvisional[driverId].points;
+      }
+    }
+    const qualiBonus = calculateConstructorQualifyingBonus(constructor.id, qualiResults);
+    constructorProvisional[constructor.id] = {
+      points: racePoints + qualiBonus.bonus,
+      racePoints,
+      qualiBonus: qualiBonus.bonus,
+    };
+  }
+
+  return {
+    round: latestQualiRound,
+    raceName: qualiRace.raceName,
+    driverProvisional,
+    constructorProvisional,
+  };
+}
+
+function renderProvisionalBanner() {
+  const container = document.getElementById('provisional-race-banner');
+  if (!container) return;
+
+  const provisional = getProvisionalData();
+  if (!provisional) {
+    container.hidden = true;
+    container.innerHTML = '';
+    return;
+  }
+
+  container.hidden = false;
+  container.innerHTML = `
+    <span class="provisional-banner__icon" aria-hidden="true">&#9203;</span>
+    <div class="provisional-banner__text">
+      <strong>Qualifying complete &mdash; ${provisional.raceName}</strong>
+      <span>Points below are projected if grid positions hold to the finish. No position changes assumed.</span>
+    </div>
+  `;
+}
+
 function updateTeamMeta() {
   const team = getTeam();
   document.getElementById('team-budget').textContent = `$${team.budget.toFixed(1)}M`;
@@ -163,13 +252,32 @@ function updateTeamMeta() {
 
   const history = loadScoringHistory();
   const totalPoints = Object.values(history).reduce((sum, r) => sum + (r.total || 0), 0);
-  document.getElementById('team-total-points').textContent = totalPoints;
+
+  const provisional = getProvisionalData();
+  const totalEl = document.getElementById('team-total-points');
+  if (provisional) {
+    const provDriverPts = team.drivers.reduce((sum, dId) => {
+      return sum + (provisional.driverProvisional[dId]?.points || 0);
+    }, 0);
+    const provConPts = team.constructors.reduce((sum, cId) => {
+      return sum + (provisional.constructorProvisional[cId]?.points || 0);
+    }, 0);
+    const provTotal = provDriverPts + provConPts;
+    totalEl.innerHTML = `${totalPoints} <span class="meta-provisional" title="Projected points this race if qualifying positions hold">+~${provTotal} proj.</span>`;
+  } else {
+    totalEl.textContent = totalPoints;
+  }
+
+  renderProvisionalBanner();
 }
 
 function renderSlots() {
   const team = getTeam();
   const slotsContainer = document.getElementById('driver-slots');
   const constructorContainer = document.getElementById('constructor-slots');
+
+  const provisional = getProvisionalData();
+  renderProvisionalBanner();
 
   // Build per-driver points from scoring history
   const history = loadScoringHistory();
@@ -234,6 +342,16 @@ function renderSlots() {
       ? `<span class="slot__driver-last">Last: ${lastPts >= 0 ? '+' : ''}${lastPts}</span>`
       : '';
 
+    const provPts = provisional?.driverProvisional?.[driverId];
+    const provisionalHtml = provPts !== undefined
+      ? `<div class="slot__provisional" title="Projected if P${provPts.position} finish — no position changes assumed">
+           <span class="slot__provisional__icon">&#126;</span>
+           <span class="slot__provisional__pts">${provPts.points >= 0 ? '+' : ''}${provPts.points} pts</span>
+           <span class="slot__provisional__pos">if P${provPts.position}</span>
+           <span class="slot__provisional__badge">PROJ</span>
+         </div>`
+      : '';
+
     return `
       <div class="slot slot--filled" data-slot="${i}" data-type="driver" style="border-color:${color}"
            data-driver-profile="${driverId}" aria-label="View ${driver.firstName} ${driver.lastName} profile">
@@ -248,6 +366,7 @@ function renderSlots() {
             <span class="slot__driver-points">${totalPts} pts</span>
             ${lastPtsHtml}
           </div>
+          ${provisionalHtml}
           <button class="slot__remove" data-remove-type="driver" data-remove-slot="${i}" data-no-profile
                   aria-label="Remove ${driver.firstName} ${driver.lastName}">Remove</button>
         </div>
@@ -270,6 +389,16 @@ function renderSlots() {
 
     const totalPts = constructorTotalPts[constructorId] || 0;
 
+    const cProvPts = provisional?.constructorProvisional?.[constructorId];
+    const cProvisionalHtml = cProvPts !== undefined
+      ? `<div class="slot__provisional" title="Projected: ${cProvPts.racePoints} race pts + ${cProvPts.qualiBonus >= 0 ? '+' : ''}${cProvPts.qualiBonus} quali bonus">
+           <span class="slot__provisional__icon">&#126;</span>
+           <span class="slot__provisional__pts">${cProvPts.points >= 0 ? '+' : ''}${cProvPts.points} pts</span>
+           <span class="slot__provisional__pos">${cProvPts.racePoints} race, ${cProvPts.qualiBonus >= 0 ? '+' : ''}${cProvPts.qualiBonus} quali</span>
+           <span class="slot__provisional__badge">PROJ</span>
+         </div>`
+      : '';
+
     return `
       <div class="slot slot--filled slot--constructor" data-slot="${i}" data-type="constructor" style="border-color:${c.color}">
         <div class="slot__driver">
@@ -282,6 +411,7 @@ function renderSlots() {
             <span class="slot__driver-price">$${c.price}M</span>
             <span class="slot__driver-points">${totalPts} pts</span>
           </div>
+          ${cProvisionalHtml}
           <button class="slot__remove" data-remove-type="constructor" data-remove-slot="${i}"
                   aria-label="Remove ${c.name}">Remove</button>
         </div>
